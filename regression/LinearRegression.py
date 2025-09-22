@@ -21,6 +21,10 @@ class SimpleLinearModel:
             raise Exception(f"y_data needs to be one dimensional: y_data.shape={self.y_data.shape}")
 
     @cached_property
+    def dtype(self) -> np.dtype:
+        return self.y_data.dtype
+
+    @cached_property
     def x_bar(self) -> float:
         """
         average of x_data
@@ -157,6 +161,58 @@ class SimpleLinearModel:
         beta_hat_standard_error[i]= sqrt(beta_hat_varcov_matrix[i][i])
         """
         return np.vectorize(math.sqrt)(self.beta_hat_varcov_matrix.diagonal())
+
+    @cached_property
+    def SSE_i(self) -> np.typing.NDArray:
+        """
+        returns an array of SEE_i values
+        each SSE_i is the SEE dropping the ith data point from the calculation:
+        """
+        return np.array([sum(np.delete(self.residuals, index)**2) for index in range(self.n)], self.dtype)
+
+    @cached_property
+    def sigma_hat_squared_i(self) -> np.typing.NDArray:
+        """
+        returns an array of sigma_squared_hat values calculated without the ith data point
+        """
+        return self.SSE_i / self.df
+
+    @cached_property
+    def pii(self) -> np.typing.NDArray:
+        """
+        returns an array of pii values
+        pii = ith entry along the diagonal of the Projection matrix
+        """
+
+        return self.P_matrix.diagonal()
+
+    @cached_property
+    def residuals_internally_standardized(self) -> np.typing.NDArray:
+        """
+        internally standardized residuals
+        ri = ei / sigma_hat_squared * sqrt(1- pii)
+        where ei is the ith residual
+        """
+        return np.array([self.residuals[index] / math.sqrt(self.sigma_hat_squared) * math.sqrt(1 - self.pii[index])
+                         for index in range(self.n)], self.dtype)
+
+    @cached_property
+    def residuals_externally_standardized(self) -> np.typing.NDArray:
+        """
+        externally standardized residuals
+        ri_star = ei / sigma_hat_squared_i * sqrt(1-pii)
+        where ei is the ith residuals
+        """
+        return np.array([self.residuals[index] / math.sqrt(self.sigma_hat_squared_i[index]) * math.sqrt(1 - self.pii[index])
+                         for index in range(self.n)], self.dtype)
+
+    @cached_property
+    def cooks_distance(self) -> np.typing.NDArray:
+        """
+        Array of Cook's Distance for each data point
+        Ci = ri_squared / (n - df) * pii / (1-pii)
+        """
+        return self.residuals_internally_standardized**2 / (self.n - self.df) * self.pii / (1 - self.pii)
 
     def predict(self, x0) -> float:
         """
