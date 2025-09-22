@@ -4,6 +4,7 @@ import math
 from dataclasses import dataclass
 from functools import cached_property
 
+
 @dataclass(init=True, frozen=True)
 class SimpleLinearModel:
     x_data: np.typing.NDArray
