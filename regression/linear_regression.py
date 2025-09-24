@@ -6,7 +6,7 @@ from functools import cached_property
 
 
 @dataclass(init=True, frozen=True)
-class SimpleLinearModel:
+class LinearModel:
     x_data: np.typing.NDArray
     y_data: np.typing.NDArray
 
