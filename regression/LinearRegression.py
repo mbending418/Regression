@@ -12,7 +12,8 @@ class SimpleLinearModel:
 
     def __post_init__(self):
         if self.x_data.shape != self.y_data.shape:
-            raise Exception(f"x_data and y_data shapes need to be the same: X.shape={self.x_data.shape} | Y.shape={self.y_data.shape}")
+            raise Exception(f"x_data and y_data shapes need to be the same:"
+                            f" X.shape={self.x_data.shape} | Y.shape={self.y_data.shape}")
 
         if len(self.x_data.shape) != 1:
             raise Exception(f"x_data needs to be one dimensional: x_data.shape={self.x_data.shape}")
@@ -90,12 +91,20 @@ class SimpleLinearModel:
         return self.C_matrix @ self.X_matrix.transpose() @ self.y_data
 
     @cached_property
+    def y_hat(self) -> np.typing.NDArray:
+        """
+        fitted values for response variable
+        y_hat := P*y
+        """
+        return self.P_matrix @ self.y_data
+
+    @cached_property
     def residuals(self) -> np.typing.NDArray:
         """
         the residuals of our response variable
         residuals := y_data - y_fitted = y_data - P*y_data
         """
-        return self.y_data - (self.P_matrix @ self.y_data)
+        return self.y_data - self.y_hat
 
     @cached_property
     def SST(self) -> float:
@@ -112,7 +121,7 @@ class SimpleLinearModel:
         Sum of Squares due to Regression
         SSR := sum((y_hat - y_bar)^2) = sum((P*y - y_bar)^2)
         """
-        return sum(((self.P_matrix @ self.y_data) - self.y_bar) ** 2)
+        return sum((self.y_hat - self.y_bar) ** 2)
 
     @cached_property
     def SSE(self) -> float:
@@ -123,7 +132,7 @@ class SimpleLinearModel:
         return sum(self.residuals**2)
 
     @cached_property
-    def R_squared(self) -> float:
+    def r_squared(self) -> float:
         """
         R_squared value
         R_squared := SSR/SST
@@ -136,7 +145,7 @@ class SimpleLinearModel:
         correlation between x and y
         r = sqrt(R^squared) with the same sign as B1
         """
-        return float(math.sqrt(self.R_squared) * np.sign(self.beta_hat[1]))
+        return float(math.sqrt(self.r_squared) * np.sign(self.beta_hat[1]))
 
     @cached_property
     def sigma_hat_squared(self) -> np.typing.NDArray:
@@ -190,20 +199,24 @@ class SimpleLinearModel:
     def residuals_internally_standardized(self) -> np.typing.NDArray:
         """
         internally standardized residuals
-        ri = ei / sigma_hat_squared * sqrt(1- pii)
+        ri = ei / (sigma_hat * sqrt(1- pii))
         where ei is the ith residual
+        and sigma_hat is the square_root of sigma_hat_squared
         """
-        return np.array([self.residuals[index] / math.sqrt(self.sigma_hat_squared) * math.sqrt(1 - self.pii[index])
+        return np.array([self.residuals[index] /
+                         math.sqrt(self.sigma_hat_squared * (1 - self.pii[index]))
                          for index in range(self.n)], self.dtype)
 
     @cached_property
     def residuals_externally_standardized(self) -> np.typing.NDArray:
         """
         externally standardized residuals
-        ri_star = ei / sigma_hat_squared_i * sqrt(1-pii)
+        ri_star = ei / (sigma_hat_i * sqrt(1-pii))
         where ei is the ith residuals
+        and sigma_hat_i is the square_root of sigma_hat_squared_i
         """
-        return np.array([self.residuals[index] / math.sqrt(self.sigma_hat_squared_i[index]) * math.sqrt(1 - self.pii[index])
+        return np.array([self.residuals[index] /
+                         math.sqrt(self.sigma_hat_squared_i[index] * (1 - self.pii[index]))
                          for index in range(self.n)], self.dtype)
 
     @cached_property
@@ -221,7 +234,7 @@ class SimpleLinearModel:
         x0 : input x-value
         :return: fitted model value at x0
         """
-        x0 = np.array([1,x0], dtype=np.float64)
+        x0 = np.array([1, x0], dtype=np.float64)
         return float((x0 @ self.beta_hat))
 
     def predicted_value_standard_error(self, x0) -> float:
