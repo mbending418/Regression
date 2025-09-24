@@ -55,32 +55,34 @@ class LinearModel:
         return self.n - 2
 
     @cached_property
-    def X_matrix(self) -> np.typing.NDArray:
+    def design_matrix(self) -> np.typing.NDArray:
         """
-        Design Matrix, defined as follows:
-        X_matrix = [1,x]
+        Design Matrix
+        commonly denoted X
+        X := [1,x]
         where 1 is a column vector of 1's
         where x is the column vector of x_data
         """
         return np.concat([[np.ones(len(self.x_data))], [self.x_data]]).transpose()
 
     @cached_property
-    def C_matrix(self) -> np.typing.NDArray:
+    def c_matrix(self) -> np.typing.NDArray:
         """
         C Matrix
         This is an intermediate matrix used in several calculations
         C_matrix = inverse of X_matrix.transpose()*X_matrix
         """
-        return np.linalg.inv(self.X_matrix.transpose() @ self.X_matrix)
+        return np.linalg.inv(self.design_matrix.transpose() @ self.design_matrix)
 
     @cached_property
-    def P_matrix(self) -> np.typing.NDArray:
+    def projection_matrix(self) -> np.typing.NDArray:
         """
-        Projection Matrix
+        Projection Matrix also known as Hat Matrix
+        Commonly denoted P or H
         this is the matrix such that y_hat = P*y
         P_matrix := X_matrix * C_matrix * X_matrix.transpose()
         """
-        return self.X_matrix @ self.C_matrix @ self.X_matrix.transpose()
+        return self.design_matrix @ self.c_matrix @ self.design_matrix.transpose()
 
     @cached_property
     def beta_hat(self) -> np.typing.NDArray:
@@ -88,7 +90,7 @@ class LinearModel:
         estimated model coefficients
         beta_hat := C_matrix * X_matrix.transpose * y_data
         """
-        return self.C_matrix @ self.X_matrix.transpose() @ self.y_data
+        return self.c_matrix @ self.design_matrix.transpose() @ self.y_data
 
     @cached_property
     def y_hat(self) -> np.typing.NDArray:
@@ -96,7 +98,7 @@ class LinearModel:
         fitted values for response variable
         y_hat := P*y
         """
-        return self.P_matrix @ self.y_data
+        return self.projection_matrix @ self.y_data
 
     @cached_property
     def residuals(self) -> np.typing.NDArray:
@@ -107,7 +109,7 @@ class LinearModel:
         return self.y_data - self.y_hat
 
     @cached_property
-    def SST(self) -> float:
+    def sst(self) -> float:
         """
         Sum of Squares Total
         SST := sum((y - y_bar)^2)
@@ -116,7 +118,7 @@ class LinearModel:
         return sum((self.y_data - self.y_bar) ** 2)
 
     @cached_property
-    def SSR(self) -> float:
+    def ssr(self) -> float:
         """
         Sum of Squares due to Regression
         SSR := sum((y_hat - y_bar)^2) = sum((P*y - y_bar)^2)
@@ -124,7 +126,7 @@ class LinearModel:
         return sum((self.y_hat - self.y_bar) ** 2)
 
     @cached_property
-    def SSE(self) -> float:
+    def sse(self) -> float:
         """
         Sum of Squared errors
         SSE := sum(residuals**2)
@@ -137,7 +139,7 @@ class LinearModel:
         R_squared value
         R_squared := SSR/SST
         """
-        return self.SSR / self.SST
+        return self.ssr / self.sst
 
     @cached_property
     def correlation(self) -> float:
@@ -153,26 +155,26 @@ class LinearModel:
         estimate for model noise
         sigma_hat_squared := sum(residuals**2) / df = SSE/df
         """
-        return self.SSE / self.df
+        return self.sse / self.df
 
     @cached_property
-    def beta_hat_varcov_matrix(self) -> np.typing.NDArray:
+    def beta_hat_covariance_matrix(self) -> np.typing.NDArray:
         """
         the variance-covariance matrix for beta_hat
-        beta_hat_varcov_matrix = sigma_sq_hat * C
+        beta_hat_covariance_matrix = sigma_sq_hat * C
         """
-        return self.sigma_hat_squared * self.C_matrix
+        return self.sigma_hat_squared * self.c_matrix
 
     @cached_property
     def beta_hat_standard_error(self) -> np.typing.NDArray:
         """
         the standard error for beta_hat
-        beta_hat_standard_error[i]= sqrt(beta_hat_varcov_matrix[i][i])
+        beta_hat_standard_error[i]= sqrt(beta_hat_covariance_matrix[i][i])
         """
-        return np.vectorize(math.sqrt)(self.beta_hat_varcov_matrix.diagonal())
+        return np.vectorize(math.sqrt)(self.beta_hat_covariance_matrix.diagonal())
 
     @cached_property
-    def SSE_i(self) -> np.typing.NDArray:
+    def sse_i(self) -> np.typing.NDArray:
         """
         returns an array of SEE_i values
         each SSE_i is the SEE dropping the ith data point from the calculation:
@@ -184,7 +186,7 @@ class LinearModel:
         """
         returns an array of sigma_squared_hat values calculated without the ith data point
         """
-        return self.SSE_i / self.df
+        return self.sse_i / self.df
 
     @cached_property
     def pii(self) -> np.typing.NDArray:
@@ -193,7 +195,7 @@ class LinearModel:
         pii = ith entry along the diagonal of the Projection matrix
         """
 
-        return self.P_matrix.diagonal()
+        return self.projection_matrix.diagonal()
 
     @cached_property
     def residuals_internally_standardized(self) -> np.typing.NDArray:
@@ -245,7 +247,7 @@ class LinearModel:
         :return: standard error
         """
         x0 = np.array([1, x0], dtype=np.float64)
-        return float(math.sqrt(self.sigma_hat_squared * (1 + x0 @ self.C_matrix @ x0)))
+        return float(math.sqrt(self.sigma_hat_squared * (1 + x0 @ self.c_matrix @ x0)))
 
     def mean_response_standard_error(self, x0) -> float:
         """
@@ -255,4 +257,4 @@ class LinearModel:
         :return: standard error
         """
         x0 = np.array([1, x0], dtype=np.float64)
-        return float(math.sqrt(self.sigma_hat_squared * (x0 @ self.C_matrix @ x0)))
+        return float(math.sqrt(self.sigma_hat_squared * (x0 @ self.c_matrix @ x0)))
