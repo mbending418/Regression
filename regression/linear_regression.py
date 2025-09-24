@@ -7,6 +7,9 @@ from functools import cached_property
 
 @dataclass(init=True, frozen=True)
 class LinearModel:
+    """
+    Linear Regression model between y_data and x_data
+    """
     x_data: np.typing.NDArray
     y_data: np.typing.NDArray
 
