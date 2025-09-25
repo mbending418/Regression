@@ -1,7 +1,7 @@
 import numpy as np
 import math
 
-from typing import Literal, Optional
+from typing import Literal, Optional, Union
 from scipy.stats import norm, t, f
 from dataclasses import dataclass
 from functools import cached_property
@@ -11,17 +11,26 @@ from functools import cached_property
 class LinearModel:
     """
     Linear Regression model between y_data and x_data
+
+    x_data should be a 2D np.typing.NDArray
+    every row of x_data should be a different predictor
+    every row of x_data should be a data point
+
+    x_data can be 1D if you only have one predictor
+
+    y_data should be a 1D np.typing.NDArray
+    with the same length as there are rows in x_data
     """
     x_data: np.typing.NDArray
     y_data: np.typing.NDArray
 
     def __post_init__(self):
-        if self.x_data.shape != self.y_data.shape:
-            raise Exception(f"x_data and y_data shapes need to be the same:"
+        if self.x_data.shape[-1] != self.y_data.shape[0]:
+            raise Exception(f"x_data and y_data need to have the same number of data points:"
                             f" X.shape={self.x_data.shape} | Y.shape={self.y_data.shape}")
 
-        if len(self.x_data.shape) != 1:
-            raise Exception(f"x_data needs to be one dimensional: x_data.shape={self.x_data.shape}")
+        if len(self.x_data.shape) > 2:
+            raise Exception(f"x_data needs to be one or two dimensional: x_data.shape={self.x_data.shape}")
 
         if len(self.y_data.shape) != 1:
             raise Exception(f"y_data needs to be one dimensional: y_data.shape={self.y_data.shape}")
@@ -89,7 +98,10 @@ class LinearModel:
         where 1 is a column vector of 1's
         where x is the column vector of x_data
         """
-        return np.concat([[np.ones(len(self.x_data))], [self.x_data]]).transpose()
+        x_data = self.x_data
+        if len(x_data.shape) == 1:
+            x_data = x_data[..., np.newaxis]
+        return np.concat((np.ones((x_data.shape[0], 1)), x_data), axis=1)
 
     @cached_property
     def c_matrix(self) -> np.typing.NDArray:
@@ -283,40 +295,57 @@ class LinearModel:
         return (self.ssr / self.predictor_count) / (self.sse / self.df)
 
     @cached_property
-    def general_f_test(self) -> float:  # TODO: check to see if we should remove the *2
+    def general_f_test(self) -> float:
+        # TODO: check to see if we should remove the *2
+        # In theory the *2 should be removed, I should compare the F-test to ANOVA in R
+        # Maybe that will give me some insight
         """
         p_value from the General F Test
         """
         return float((1 - f.cdf(self.general_f_score, self.predictor_count, self.df)) * 2)
 
-    def predict(self, x0: float) -> float:
+    def predict(self, x0: Union[float, np.typing.NDArray]) -> float:
         """
         returns the predicted value of the model at x0
 
         x0 : input x-value
+        x0 should be an NDArray of predictors the size of predictor_count
+        if you only have one predictor x0 can be a float
         :return: fitted model value at x0
         """
-        x0 = np.array([1, x0], dtype=np.float64)
+        if isinstance(x0, float):
+            x0 = np.array([x0])
+        if x0.shape != (self.predictor_count,):
+            raise Exception(f"wrong shape for x0. Expected=({self.predictor_count},) Actual={x0.shape}")
+        x0 = np.concat((np.array([1]), x0))
         return float((x0 @ self.beta_hat))
 
-    def predicted_value_standard_error(self, x0: float) -> float:
+    def predicted_value_standard_error(self, x0: Union[float, np.typing.NDArray]) -> float:
         """
         returns the standard error for the predicted value of the model at x0
 
         :param x0: input x-value
+        x0 should be an NDArray of predictors the size of predictor_count
+        if you only have one predictor x0 can be a float
         :return: standard error
         """
-        x0 = np.array([1, x0], dtype=np.float64)
+        if isinstance(x0, float):
+            x0 = np.array([x0])
+        if x0.shape != (self.predictor_count,):
+            raise Exception(f"wrong shape for x0. Expected=({self.predictor_count},) Actual={x0.shape}")
+        x0 = np.concat((np.array([1]), x0))
         return float(math.sqrt(self.sigma_hat_squared * (1 + x0 @ self.c_matrix @ x0)))
 
-    def mean_response_standard_error(self, x0: float) -> float:
+    def mean_response_standard_error(self, x0: Union[float, np.typing.NDArray]) -> float:
         """
         returns the standard error for the average predicted value of the model at x0
 
         :param x0: input x-value
         :return: standard error
         """
-        x0 = np.array([1, x0], dtype=np.float64)
+        if isinstance(x0, float):
+            x0 = np.array([x0])
+        x0 = np.concat((np.array([1]), x0))
         return float(math.sqrt(self.sigma_hat_squared * (x0 @ self.c_matrix @ x0)))
 
     def beta_hat_p_values(self,
@@ -341,6 +370,8 @@ class LinearModel:
 
     def beta_hat_confidence_interval(self, confidence: float) -> np.typing.NDArray:
         """
+        confidence interval on model parameters
+
         :param confidence: width of confidence interval (e.g. 0.95)
         :return:
         """
@@ -349,8 +380,9 @@ class LinearModel:
         return np.array([self.beta_hat - t_crit * self.beta_hat_standard_error,
                          self.beta_hat + t_crit * self.beta_hat_standard_error])
 
-    def prediction_interval(self, x0: float, confidence: float) -> np.typing.NDArray:
+    def prediction_interval(self, x0: Union[float, np.typing.NDArray], confidence: float) -> np.typing.NDArray:
         """
+        prediction interval around x0
 
         :param x0: input x-value
         :param confidence: width of confidence interval (e.g. 0.95)
@@ -361,8 +393,11 @@ class LinearModel:
         return np.array([self.predict(x0) - t_crit * self.predicted_value_standard_error(x0),
                          self.predict(x0) + t_crit * self.predicted_value_standard_error(x0)])
 
-    def mean_response_confidence_interval(self, x0: float, confidence: float) -> np.typing.NDArray:
+    def mean_response_confidence_interval(self,
+                                          x0: Union[float, np.typing.NDArray],
+                                          confidence: float) -> np.typing.NDArray:
         """
+        confidence interval around x0
 
         :param x0: input x-value
         :param confidence: width of confidence interval (e.g. 0.95)
