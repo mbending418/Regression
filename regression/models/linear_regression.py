@@ -26,6 +26,10 @@ class LinearModel:
 
     @cached_property
     def dtype(self) -> np.dtype:
+        """
+        dtype of the response variable
+        :return:
+        """
         return self.y_data.dtype
 
     @cached_property
