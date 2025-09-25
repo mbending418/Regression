@@ -56,20 +56,21 @@ class LinearModel:
         return self.x_data.shape[0]
 
     @cached_property
-    def p(self) -> int:
+    def predictor_count(self) -> int:
         """
-        number of explanatory variables
+        number of predictor variables
+        commonly denoted as "p"
         """
         if len(self.x_data.shape) == 1:
             return 1
         return self.x_data.shape[1]
 
     @cached_property
-    def k(self) -> int:
+    def parameter_count(self) -> int:
         """
-        number of parameters
+        number of model parameters
         """
-        return self.p + 1
+        return self.predictor_count + 1
 
     @cached_property
     def df(self) -> int:
@@ -77,7 +78,7 @@ class LinearModel:
         degrees of freedom
         df = n - 2
         """
-        return self.n - self.k
+        return self.n - self.parameter_count
 
     @cached_property
     def design_matrix(self) -> np.typing.NDArray:
@@ -279,14 +280,14 @@ class LinearModel:
         General F Test score for this model
         """
 
-        return (self.ssr / self.p) / (self.sse / self.df)
+        return (self.ssr / self.predictor_count) / (self.sse / self.df)
 
     @cached_property
     def general_f_test(self) -> float:  # TODO: check to see if we should remove the *2
         """
         p_value from the General F Test
         """
-        return float((1 - f.cdf(self.general_f_score, self.p, self.df)) * 2)
+        return float((1 - f.cdf(self.general_f_score, self.predictor_count, self.df)) * 2)
 
     def predict(self, x0: float) -> float:
         """
