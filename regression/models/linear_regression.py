@@ -182,6 +182,13 @@ class LinearModel:
         return np.vectorize(math.sqrt)(self.beta_hat_covariance_matrix.diagonal())
 
     @cached_property
+    def beta_hat_t_score(self) -> np.typing.NDArray:
+        """
+        t-score for the estimated model coefficients
+        """
+        return self.beta_hat / self.beta_hat_standard_error
+
+    @cached_property
     def sse_i(self) -> np.typing.NDArray:
         """
         returns an array of SEE_i values
