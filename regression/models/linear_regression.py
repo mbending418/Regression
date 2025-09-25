@@ -2,7 +2,7 @@ import numpy as np
 import math
 
 from typing import Literal, Optional
-from scipy.stats import norm, t
+from scipy.stats import norm, t, f
 from dataclasses import dataclass
 from functools import cached_property
 
@@ -49,19 +49,35 @@ class LinearModel:
         return float(np.average(self.y_data))
 
     @cached_property
-    def n(self) -> np.typing.NDArray:
+    def n(self) -> int:
         """
         number of data points
         """
-        return self.y_data.shape[0]
+        return self.x_data.shape[0]
 
     @cached_property
-    def df(self) -> np.typing.NDArray:
+    def p(self) -> int:
+        """
+        number of explanatory variables
+        """
+        if len(self.x_data.shape) == 1:
+            return 1
+        return self.x_data.shape[1]
+
+    @cached_property
+    def k(self) -> int:
+        """
+        number of parameters
+        """
+        return self.p + 1
+
+    @cached_property
+    def df(self) -> int:
         """
         degrees of freedom
         df = n - 2
         """
-        return self.n - 2
+        return self.n - self.k
 
     @cached_property
     def design_matrix(self) -> np.typing.NDArray:
@@ -124,7 +140,7 @@ class LinearModel:
         SST := sum((y - y_bar)^2)
         :return:
         """
-        return sum((self.y_data - self.y_bar) ** 2)
+        return float(sum((self.y_data - self.y_bar) ** 2))
 
     @cached_property
     def ssr(self) -> float:
@@ -132,7 +148,7 @@ class LinearModel:
         Sum of Squares due to Regression
         SSR := sum((y_hat - y_bar)^2) = sum((P*y - y_bar)^2)
         """
-        return sum((self.y_hat - self.y_bar) ** 2)
+        return float(sum((self.y_hat - self.y_bar) ** 2))
 
     @cached_property
     def sse(self) -> float:
@@ -140,7 +156,7 @@ class LinearModel:
         Sum of Squared errors
         SSE := sum(residuals**2)
         """
-        return sum(self.residuals ** 2)
+        return float(sum(self.residuals ** 2))
 
     @cached_property
     def r_squared(self) -> float:
@@ -159,7 +175,7 @@ class LinearModel:
         return float(math.sqrt(self.r_squared) * np.sign(self.beta_hat[1]))
 
     @cached_property
-    def sigma_hat_squared(self) -> np.typing.NDArray:
+    def sigma_hat_squared(self) -> float:
         """
         estimate for model noise
         sigma_hat_squared := sum(residuals**2) / df = SSE/df
@@ -257,6 +273,21 @@ class LinearModel:
         """
         return np.array([norm.ppf((i + .5) / self.n) for i in range(0, self.n)])
 
+    @cached_property
+    def general_f_score(self) -> float:
+        """
+        General F Test score for this model
+        """
+
+        return (self.ssr / self.p) / (self.sse / self.df)
+
+    @cached_property
+    def general_f_test(self) -> float:  # TODO: check to see if we should remove the *2
+        """
+        p_value from the General F Test
+        """
+        return float((1 - f.cdf(self.general_f_score, self.p, self.df)) * 2)
+
     def predict(self, x0: float) -> float:
         """
         returns the predicted value of the model at x0
@@ -312,7 +343,7 @@ class LinearModel:
         :param confidence: width of confidence interval (e.g. 0.95)
         :return:
         """
-        t_crit = t.ppf((1 + confidence)/2, self.df)
+        t_crit = t.ppf((1 + confidence) / 2, self.df)
 
         return np.array([self.beta_hat - t_crit * self.beta_hat_standard_error,
                          self.beta_hat + t_crit * self.beta_hat_standard_error])
