@@ -1,7 +1,8 @@
 import numpy as np
 import math
 
-from scipy.stats import norm
+from typing import Literal, Optional
+from scipy.stats import norm, t
 from dataclasses import dataclass
 from functools import cached_property
 
@@ -139,7 +140,7 @@ class LinearModel:
         Sum of Squared errors
         SSE := sum(residuals**2)
         """
-        return sum(self.residuals**2)
+        return sum(self.residuals ** 2)
 
     @cached_property
     def r_squared(self) -> float:
@@ -194,7 +195,7 @@ class LinearModel:
         returns an array of SEE_i values
         each SSE_i is the SEE dropping the ith data point from the calculation:
         """
-        return np.array([sum(np.delete(self.residuals, index)**2) for index in range(self.n)], self.dtype)
+        return np.array([sum(np.delete(self.residuals, index) ** 2) for index in range(self.n)], self.dtype)
 
     @cached_property
     def sigma_hat_squared_i(self) -> np.typing.NDArray:
@@ -242,7 +243,7 @@ class LinearModel:
         Array of Cook's Distance for each data point
         Ci = ri_squared / (n - df) * pii / (1-pii)
         """
-        return self.residuals_internally_standardized**2 / (self.n - self.df) * self.pii / (1 - self.pii)
+        return self.residuals_internally_standardized ** 2 / (self.n - self.df) * self.pii / (1 - self.pii)
 
     @cached_property
     def theoretical_quantiles(self) -> np.typing.NDArray:
@@ -254,7 +255,7 @@ class LinearModel:
 
         :return: array of theoretical quantiles
         """
-        return np.array([norm.ppf((i + .5)/self.n) for i in range(0, self.n)])
+        return np.array([norm.ppf((i + .5) / self.n) for i in range(0, self.n)])
 
     def predict(self, x0: float) -> float:
         """
@@ -285,3 +286,57 @@ class LinearModel:
         """
         x0 = np.array([1, x0], dtype=np.float64)
         return float(math.sqrt(self.sigma_hat_squared * (x0 @ self.c_matrix @ x0)))
+
+    def beta_hat_p_values(self,
+                          offsets: Optional[np.typing.NDArray] = None,
+                          sided: Literal["one-sided", "two-sided"] = "two-sided") -> np.typing.NDArray:
+        """
+        perform a simple t-test on the model parameters
+
+        :param offsets: offset to test against for each model parameter
+        :param sided: whether to do a one-sided or two-sided test
+        :return: the t-test probabilities for each model parameter
+        """
+        if offsets is not None:
+            t_score = self.beta_hat_t_score - offsets / self.beta_hat_standard_error
+        else:
+            t_score = self.beta_hat_t_score
+
+        p_value = 1 - t.cdf(t_score, self.df)
+        if sided == "two-sided":
+            p_value *= 2
+        return p_value
+
+    def beta_hat_confidence_interval(self, confidence: float) -> np.typing.NDArray:
+        """
+        :param confidence: width of confidence interval (e.g. 0.95)
+        :return:
+        """
+        t_crit = t.ppf((1 + confidence)/2, self.df)
+
+        return np.array([self.beta_hat - t_crit * self.beta_hat_standard_error,
+                         self.beta_hat + t_crit * self.beta_hat_standard_error])
+
+    def prediction_interval(self, x0: float, confidence: float) -> np.typing.NDArray:
+        """
+
+        :param x0: input x-value
+        :param confidence: width of confidence interval (e.g. 0.95)
+        :return:
+        """
+        t_crit = t.ppf((1 + confidence) / 2, self.df)
+
+        return np.array([self.predict(x0) - t_crit * self.predicted_value_standard_error(x0),
+                         self.predict(x0) + t_crit * self.predicted_value_standard_error(x0)])
+
+    def mean_response_confidence_interval(self, x0: float, confidence: float) -> np.typing.NDArray:
+        """
+
+        :param x0: input x-value
+        :param confidence: width of confidence interval (e.g. 0.95)
+        :return:
+        """
+        t_crit = t.ppf((1 + confidence) / 2, self.df)
+
+        return np.array([self.predict(x0) - t_crit * self.mean_response_standard_error(x0),
+                         self.predict(x0) + t_crit * self.mean_response_standard_error(x0)])
