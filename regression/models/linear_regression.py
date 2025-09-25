@@ -249,7 +249,7 @@ class LinearModel:
         """
         return np.array([norm.ppf((i + .5)/self.n) for i in range(0, self.n)])
 
-    def predict(self, x0) -> float:
+    def predict(self, x0: float) -> float:
         """
         returns the predicted value of the model at x0
 
@@ -259,7 +259,7 @@ class LinearModel:
         x0 = np.array([1, x0], dtype=np.float64)
         return float((x0 @ self.beta_hat))
 
-    def predicted_value_standard_error(self, x0) -> float:
+    def predicted_value_standard_error(self, x0: float) -> float:
         """
         returns the standard error for the predicted value of the model at x0
 
@@ -269,7 +269,7 @@ class LinearModel:
         x0 = np.array([1, x0], dtype=np.float64)
         return float(math.sqrt(self.sigma_hat_squared * (1 + x0 @ self.c_matrix @ x0)))
 
-    def mean_response_standard_error(self, x0) -> float:
+    def mean_response_standard_error(self, x0: float) -> float:
         """
         returns the standard error for the average predicted value of the model at x0
 
