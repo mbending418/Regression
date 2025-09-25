@@ -1,6 +1,7 @@
 import numpy as np
 import math
 
+from scipy.stats import norm
 from dataclasses import dataclass
 from functools import cached_property
 
@@ -235,6 +236,18 @@ class LinearModel:
         Ci = ri_squared / (n - df) * pii / (1-pii)
         """
         return self.residuals_internally_standardized**2 / (self.n - self.df) * self.pii / (1 - self.pii)
+
+    @cached_property
+    def theoretical_quantiles(self) -> np.typing.NDArray:
+        """
+        Array of theoretical quantiles
+
+        Plot against sorted standardized residuals for a QQ-Plot
+        which tests that the standardized residuals are normally distributed
+
+        :return: array of theoretical quantiles
+        """
+        return np.array([norm.ppf((i + .5)/self.n) for i in range(0, self.n)])
 
     def predict(self, x0) -> float:
         """
