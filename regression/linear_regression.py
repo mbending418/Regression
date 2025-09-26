@@ -21,19 +21,26 @@ class LinearModel:
     y_data should be a 1D np.typing.NDArray
     with the same length as there are rows in x_data
     """
+
     x_data: np.typing.NDArray
     y_data: np.typing.NDArray
 
     def __post_init__(self):
         if self.x_data.shape[0] != self.y_data.shape[0]:
-            raise Exception(f"x_data and y_data need to have the same number of data points:"
-                            f" X.shape={self.x_data.shape} | Y.shape={self.y_data.shape}")
+            raise Exception(
+                f"x_data and y_data need to have the same number of data points:"
+                f" X.shape={self.x_data.shape} | Y.shape={self.y_data.shape}"
+            )
 
         if len(self.x_data.shape) > 2:
-            raise Exception(f"x_data needs to be one or two dimensional: x_data.shape={self.x_data.shape}")
+            raise Exception(
+                f"x_data needs to be one or two dimensional: x_data.shape={self.x_data.shape}"
+            )
 
         if len(self.y_data.shape) != 1:
-            raise Exception(f"y_data needs to be one dimensional: y_data.shape={self.y_data.shape}")
+            raise Exception(
+                f"y_data needs to be one dimensional: y_data.shape={self.y_data.shape}"
+            )
 
     @cached_property
     def dtype(self) -> np.dtype:
@@ -169,7 +176,7 @@ class LinearModel:
         Sum of Squared errors
         SSE := sum(residuals**2)
         """
-        return float(sum(self.residuals ** 2))
+        return float(sum(self.residuals**2))
 
     @cached_property
     def r_squared(self) -> float:
@@ -232,7 +239,10 @@ class LinearModel:
         returns an array of SEE_i values
         each SSE_i is the SEE dropping the ith data point from the calculation:
         """
-        return np.array([sum(np.delete(self.residuals, index) ** 2) for index in range(self.n)], self.dtype)
+        return np.array(
+            [sum(np.delete(self.residuals, index) ** 2) for index in range(self.n)],
+            self.dtype,
+        )
 
     @cached_property
     def sigma_hat_squared_i(self) -> np.typing.NDArray:
@@ -258,9 +268,14 @@ class LinearModel:
         where ei is the ith residual
         and sigma_hat is the square_root of sigma_hat_squared
         """
-        return np.array([self.residuals[index] /
-                         math.sqrt(self.sigma_hat_squared * (1 - self.pii[index]))
-                         for index in range(self.n)], self.dtype)
+        return np.array(
+            [
+                self.residuals[index]
+                / math.sqrt(self.sigma_hat_squared * (1 - self.pii[index]))
+                for index in range(self.n)
+            ],
+            self.dtype,
+        )
 
     @cached_property
     def residuals_externally_standardized(self) -> np.typing.NDArray:
@@ -270,9 +285,14 @@ class LinearModel:
         where ei is the ith residuals
         and sigma_hat_i is the square_root of sigma_hat_squared_i
         """
-        return np.array([self.residuals[index] /
-                         math.sqrt(self.sigma_hat_squared_i[index] * (1 - self.pii[index]))
-                         for index in range(self.n)], self.dtype)
+        return np.array(
+            [
+                self.residuals[index]
+                / math.sqrt(self.sigma_hat_squared_i[index] * (1 - self.pii[index]))
+                for index in range(self.n)
+            ],
+            self.dtype,
+        )
 
     @cached_property
     def cooks_distance(self) -> np.typing.NDArray:
@@ -280,7 +300,12 @@ class LinearModel:
         Array of Cook's Distance for each data point
         Ci = ri_squared / (n - df) * pii / (1-pii)
         """
-        return self.residuals_internally_standardized ** 2 / (self.n - self.df) * self.pii / (1 - self.pii)
+        return (
+            self.residuals_internally_standardized**2
+            / (self.n - self.df)
+            * self.pii
+            / (1 - self.pii)
+        )
 
     @cached_property
     def theoretical_quantiles(self) -> np.typing.NDArray:
@@ -292,7 +317,7 @@ class LinearModel:
 
         :return: array of theoretical quantiles
         """
-        return np.array([norm.ppf((i + .5) / self.n) for i in range(0, self.n)])
+        return np.array([norm.ppf((i + 0.5) / self.n) for i in range(0, self.n)])
 
     @cached_property
     def general_f_score(self) -> float:
@@ -324,11 +349,15 @@ class LinearModel:
         if isinstance(x0, float):
             x0 = np.array([x0])
         if x0.shape != (self.predictor_count,):
-            raise Exception(f"wrong shape for x0. Expected=({self.predictor_count},) Actual={x0.shape}")
+            raise Exception(
+                f"wrong shape for x0. Expected=({self.predictor_count},) Actual={x0.shape}"
+            )
         x0 = np.concat((np.array([1]), x0))
         return float((x0 @ self.beta_hat))
 
-    def predicted_value_standard_error(self, x0: Union[float, np.typing.NDArray]) -> float:
+    def predicted_value_standard_error(
+        self, x0: Union[float, np.typing.NDArray]
+    ) -> float:
         """
         returns the standard error for the predicted value of the model at x0
 
@@ -340,11 +369,15 @@ class LinearModel:
         if isinstance(x0, float):
             x0 = np.array([x0])
         if x0.shape != (self.predictor_count,):
-            raise Exception(f"wrong shape for x0. Expected=({self.predictor_count},) Actual={x0.shape}")
+            raise Exception(
+                f"wrong shape for x0. Expected=({self.predictor_count},) Actual={x0.shape}"
+            )
         x0 = np.concat((np.array([1]), x0))
         return float(math.sqrt(self.sigma_hat_squared * (1 + x0 @ self.c_matrix @ x0)))
 
-    def mean_response_standard_error(self, x0: Union[float, np.typing.NDArray]) -> float:
+    def mean_response_standard_error(
+        self, x0: Union[float, np.typing.NDArray]
+    ) -> float:
         """
         returns the standard error for the average predicted value of the model at x0
 
@@ -356,9 +389,11 @@ class LinearModel:
         x0 = np.concat((np.array([1]), x0))
         return float(math.sqrt(self.sigma_hat_squared * (x0 @ self.c_matrix @ x0)))
 
-    def beta_hat_p_values(self,
-                          offsets: Optional[np.typing.NDArray] = None,
-                          sided: Literal["one-sided", "two-sided"] = "two-sided") -> np.typing.NDArray:
+    def beta_hat_p_values(
+        self,
+        offsets: Optional[np.typing.NDArray] = None,
+        sided: Literal["one-sided", "two-sided"] = "two-sided",
+    ) -> np.typing.NDArray:
         """
         perform a simple t-test on the model parameters
 
@@ -385,10 +420,16 @@ class LinearModel:
         """
         t_crit = t.ppf((1 + confidence) / 2, self.df)
 
-        return np.array([self.beta_hat - t_crit * self.beta_hat_standard_error,
-                         self.beta_hat + t_crit * self.beta_hat_standard_error])
+        return np.array(
+            [
+                self.beta_hat - t_crit * self.beta_hat_standard_error,
+                self.beta_hat + t_crit * self.beta_hat_standard_error,
+            ]
+        )
 
-    def prediction_interval(self, x0: Union[float, np.typing.NDArray], confidence: float) -> np.typing.NDArray:
+    def prediction_interval(
+        self, x0: Union[float, np.typing.NDArray], confidence: float
+    ) -> np.typing.NDArray:
         """
         prediction interval around x0
 
@@ -398,12 +439,16 @@ class LinearModel:
         """
         t_crit = t.ppf((1 + confidence) / 2, self.df)
 
-        return np.array([self.predict(x0) - t_crit * self.predicted_value_standard_error(x0),
-                         self.predict(x0) + t_crit * self.predicted_value_standard_error(x0)])
+        return np.array(
+            [
+                self.predict(x0) - t_crit * self.predicted_value_standard_error(x0),
+                self.predict(x0) + t_crit * self.predicted_value_standard_error(x0),
+            ]
+        )
 
-    def mean_response_confidence_interval(self,
-                                          x0: Union[float, np.typing.NDArray],
-                                          confidence: float) -> np.typing.NDArray:
+    def mean_response_confidence_interval(
+        self, x0: Union[float, np.typing.NDArray], confidence: float
+    ) -> np.typing.NDArray:
         """
         confidence interval around x0
 
@@ -413,5 +458,9 @@ class LinearModel:
         """
         t_crit = t.ppf((1 + confidence) / 2, self.df)
 
-        return np.array([self.predict(x0) - t_crit * self.mean_response_standard_error(x0),
-                         self.predict(x0) + t_crit * self.mean_response_standard_error(x0)])
+        return np.array(
+            [
+                self.predict(x0) - t_crit * self.mean_response_standard_error(x0),
+                self.predict(x0) + t_crit * self.mean_response_standard_error(x0),
+            ]
+        )
