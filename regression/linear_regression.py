@@ -25,7 +25,7 @@ class LinearModel:
     y_data: np.typing.NDArray
 
     def __post_init__(self):
-        if self.x_data.shape[-1] != self.y_data.shape[0]:
+        if self.x_data.shape[0] != self.y_data.shape[0]:
             raise Exception(f"x_data and y_data need to have the same number of data points:"
                             f" X.shape={self.x_data.shape} | Y.shape={self.y_data.shape}")
 
@@ -180,6 +180,14 @@ class LinearModel:
         return self.ssr / self.sst
 
     @cached_property
+    def r_squared_adjusted(self) -> float:
+        """
+        Adjusted R_squared value
+        R_squared_adjusted := 1 - (SSE / n-k)/(SST/n-1)
+        """
+        return 1 - (self.sse / self.df) / (self.sst / (self.n - 1))
+
+    @cached_property
     def correlation(self) -> float:
         """
         correlation between x and y
@@ -296,13 +304,13 @@ class LinearModel:
 
     @cached_property
     def general_f_test(self) -> float:
-        # TODO: check to see if we should remove the *2
+        # TODO: do some testing ont his. I removed the 2 but maybe it should be there?
         # In theory the *2 should be removed, I should compare the F-test to ANOVA in R
         # Maybe that will give me some insight
         """
         p_value from the General F Test
         """
-        return float((1 - f.cdf(self.general_f_score, self.predictor_count, self.df)) * 2)
+        return float((1 - f.cdf(self.general_f_score, self.predictor_count, self.df)))
 
     def predict(self, x0: Union[float, np.typing.NDArray]) -> float:
         """
@@ -363,7 +371,7 @@ class LinearModel:
         else:
             t_score = self.beta_hat_t_score
 
-        p_value = 1 - t.cdf(t_score, self.df)
+        p_value = 1 - t.cdf(abs(t_score), self.df)
         if sided == "two-sided":
             p_value *= 2
         return p_value
