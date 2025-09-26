@@ -6,7 +6,7 @@ authors = ["Michael Bending <michael.a.bending@gmail.com>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "^3.10"
+python = "^3.11"
 numpy = ">2.0"
 scipy = ">=1.14"
 
@@ -15,6 +15,7 @@ scipy = ">=1.14"
 jupyterlab = "^4.4.7"
 mypy = "^1.18.2"
 black = "^25.9.0"
+scipy-stubs = "^1.16.2.0"
 
 [build-system]
 requires = ["poetry-core"]
