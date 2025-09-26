@@ -14,7 +14,7 @@ class ANOVA:
     full_model: LinearModel
     reduced_model: LinearModel
 
-    def __post_init__(self):
+    def __post_init__(self): # TODO: refactor this to be more pythonic
         if not np.array_equal(self.full_model.y_data, self.reduced_model.y_data):
             raise Exception("y_data must match between full model and reduced model")
         full_model_predictors = [self.full_model.x_data[:, i] for i in range(self.full_model.predictor_count)]
