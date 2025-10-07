@@ -16,6 +16,7 @@ jupyterlab = "^4.4.7"
 mypy = "^1.18.2"
 black = "^25.9.0"
 scipy-stubs = "^1.16.2.0"
+matplotlib = "^3.10.6"
 
 [build-system]
 requires = ["poetry-core"]
