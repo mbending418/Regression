@@ -464,4 +464,3 @@ class LinearModel:
                 self.predict(x0) + t_crit * self.mean_response_standard_error(x0),
             ]
         )
-    
