@@ -113,22 +113,60 @@ class LinearModelPlots:
     """
     lm: LinearModel
 
-    def simple_linear_regression_plot(self):
+    def simple_linear_regression_plot(self,
+                                      show_scatter_plot: bool = True,
+                                      show_regression_line: bool = False,
+                                      show_error_bars: Optional[Literal["mean", "predicted"]] = None,
+                                      confidence_level: float = .95):
         """
-        For a Simple Linear Model (one predictor),
-        plot the y vs. x scatterplot
-        plot the fitted regression line
+        For a Simple Linear Model (one predictor)
+        optionally plot the y vs. x scatterplot (default: True)
+        optionally plot the fitted regression line
+        optionally plot error bars for mean response or predicted response around the regression line
+
+        :param show_scatter_plot: set to True to show the Y vs X Scatter Plot
+        :param show_regression_line: set to true to add a regression line
+        :param show_error_bars:
+            set to None (default) to plot no error bars
+            set to "mean" to plot the "mean response confidence interval" around the regression line
+            set to "predicted" to plot the "predicted value prediction interval" around the regression line
+        :param confidence_level: the confidence level for the error bars
         :return:
         """
         if self.lm.predictor_count > 1:
             raise Exception("Predictor Count for LinearModel must be 1 for a simple linear regression plot. "
                             "Try LinearModelPlots.matrix_plot for Multi-Linear Regression")
-        plt.scatter(self.lm.x_data, self.lm.y_data)
-        plt.plot(self.lm.x_data, self.lm.y_hat, color="red")
+        legend = []
+        if show_scatter_plot:
+            plt.scatter(self.lm.x_data, self.lm.y_data)
+            legend.append("Data")
+        if show_regression_line:
+            plt.plot(self.lm.x_data, self.lm.y_hat, color="red")
+            legend.append("Regression Line")
+        if show_error_bars == "mean":
+            x_min = np.amin(self.lm.x_data)
+            x_max = np.amax(self.lm.x_data)
+            x_step = (x_max/x_min)/100
+            x = np.arange(x_min, x_max + x_step, x_step)
+            interval = np.array([self.lm.mean_response_confidence_interval(x0=x0, confidence=confidence_level) for
+                                 x0 in x])
+            plt.plot(x, interval[:, 0], color="green")
+            plt.plot(x, interval[:, 1], color="green")
+            legend.append("Confidence Interval")
+        elif show_error_bars == "predicted":
+            x_min = np.amin(self.lm.x_data)
+            x_max = np.amax(self.lm.x_data)
+            x_step = (x_max/x_min)/100
+            x = np.arange(x_min, x_max + x_step, x_step)
+            interval = np.array([self.lm.prediction_interval(x0=x0, confidence=confidence_level) for
+                                 x0 in x])
+            plt.plot(x, interval[:, 0], color="green")
+            plt.plot(x, interval[:, 1], color="green")
+            legend.append("Prediction Interval")
         plt.title("Scatterplot Y vs. X")
         plt.xlabel("X")
         plt.ylabel("Y")
-        plt.legend(["Data", "Regression Line"])
+        plt.legend(legend)
 
     def matrix_plot(self):
         """
@@ -285,7 +323,7 @@ class LinearModelPlots:
         i.e. plot Ci vs Index
         :return:
         """
-        plt.scatter(range(1, self.lm.n+1), self.lm.cooks_distance)
+        plt.scatter(range(1, self.lm.n + 1), self.lm.cooks_distance)
         plt.title("Cook's Distance Plot")
         plt.xlabel("index")
         plt.ylabel("Ci")
