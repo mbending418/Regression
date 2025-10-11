@@ -1,0 +1,291 @@
+import math
+import numpy as np
+import pandas as pd
+from typing import Optional, List, Literal
+from matplotlib import pyplot as plt
+from dataclasses import dataclass
+from regression.linear_regression import LinearModel
+
+
+@dataclass(init=True, frozen=True)
+class LinearModelSummary:
+    """
+    Class for Summarizing a Linear Model
+    """
+    lm: LinearModel
+
+    def print_full_summary(self):
+        """
+        print a full model summary
+
+        includes:
+        coefficient summary
+        variance summary
+        gof summary
+        :return:
+        """
+        self.linear_model_coefficient_summary()
+        print("")
+        self.linear_model_variance_summary()
+        print("")
+        self.linear_model_gof_summary()
+
+    def linear_model_coefficient_summary(self, print_summary: bool = True) -> pd.DataFrame:
+        """
+        get the coefficient summary
+
+        includes information about:
+        beta_hat
+        beta_hat_standard_error
+        t_score
+        p_value
+
+        :param print_summary: set to True to print the summary (default=True)
+        :return:
+        """
+        df = pd.DataFrame()
+        df["Beta_Hat"] = self.lm.beta_hat
+        df["Beta_Hat_SE"] = self.lm.beta_hat_standard_error
+        df["t_score"] = self.lm.beta_hat_t_score
+        df["p(>|t|)"] = self.lm.beta_hat_p_values()
+        if print_summary:
+            print(df)
+        return df
+
+    def linear_model_variance_summary(self, print_summary: bool = True) -> pd.DataFrame:
+        """
+        get the variance summary
+
+        includes the following:
+        sst
+        ssr
+        sse
+        sigma_sq_hat
+
+        :param print_summary: set to True to print the summary (default=True)
+        :return:
+        """
+        df = pd.DataFrame()
+        df["SST"] = [self.lm.sst]
+        df["SSR"] = [self.lm.ssr]
+        df["SSE"] = [self.lm.sse]
+
+        df["Sigma_Sq_Hat"] = [self.lm.sigma_hat_squared]
+
+        if print_summary:
+            print(df)
+        return df
+
+    def linear_model_gof_summary(self, print_summary: bool = True) -> pd.DataFrame:
+        """
+        get the goodness of fit summary
+
+        includes the following:
+        General F-test score
+        General F-Test p-value
+        first degree of freedom for F-Test (model degrees of freedom)
+        second degree of freedom for F-Test (reduced model degrees of freedom: ie predictor count)
+        R_sq value
+        correlation coefficient (r)
+
+        :param print_summary: set to True to print the summary (default=True)
+        :return:
+        """
+        df = pd.DataFrame()
+        df["F"] = [self.lm.general_f_score]
+        df["p(F>1)"] = [self.lm.general_f_test]
+        df["df1"] = [self.lm.df]
+        df["df2"] = [self.lm.predictor_count]
+
+        df["R_Sq"] = [self.lm.r_squared]
+        if self.lm.predictor_count > 1:
+            df["R_Sq_Adj"] = [self.lm.r_squared_adjusted]
+        df["r"] = [self.lm.correlation]
+        if print_summary:
+            print(df)
+        return df
+
+
+@dataclass(init=True, frozen=True)
+class LinearModelPlots:
+    """
+    Class for creating Diagnostic Plots for a Linear Model
+    """
+    lm: LinearModel
+
+    def simple_linear_regression_plot(self):
+        """
+        For a Simple Linear Model (one predictor),
+        plot the y vs. x scatterplot
+        plot the fitted regression line
+        :return:
+        """
+        if self.lm.predictor_count > 1:
+            raise Exception("Predictor Count for LinearModel must be 1 for a simple linear regression plot. "
+                            "Try LinearModelPlots.matrix_plot for Multi-Linear Regression")
+        plt.scatter(self.lm.x_data, self.lm.y_data)
+        plt.plot(self.lm.x_data, self.lm.y_hat, color="red")
+        plt.title("Scatterplot Y vs. X")
+        plt.xlabel("X")
+        plt.ylabel("Y")
+        plt.legend(["Data", "Regression Line"])
+
+    def matrix_plot(self):
+        """
+        Create the Matrix Plot for a MultiLinear Model
+
+        ie create a grid plotting:
+         the response vs each predictor.
+         each predictor vs each other predictor.
+        :return:
+        """
+        fig, ax = plt.subplots(self.lm.predictor_count + 1, self.lm.predictor_count + 1)
+
+        for i in range(self.lm.predictor_count):
+            ax[0, i + 1].scatter(self.lm.x_data[:, i], self.lm.y_data)
+            ax[i + 1, 0].scatter(self.lm.x_data[:, i], self.lm.y_data)
+
+        for i in range(self.lm.predictor_count):
+            for j in range(self.lm.predictor_count):
+                if i != j:
+                    ax[j + 1, i + 1].scatter(self.lm.x_data[:, i], self.lm.x_data[:, j])
+
+        font_size = 12
+        ax[0, 0].text(0.4, 0.5, "Y", fontsize=font_size)
+        for i in range(self.lm.predictor_count):
+            ax[i + 1, i + 1].text(0.4, 0.5, f"X_{i + 1}", fontsize=font_size)
+
+        plt.show()
+
+    def predictor_residual_plot(self,
+                                predictors: Optional[List[int]] = None,
+                                standardize_residuals: bool = False,
+                                absolute_value: bool = False):
+        """
+        plot the residuals vs predictors
+
+        :param predictors: which predictors (by index) to show
+        :param standardize_residuals: set to True to standardize residuals
+        :param absolute_value: set to True to take the absolute value of the residuals
+        :return:
+        """
+        if standardize_residuals:
+            residuals = self.lm.residuals_internally_standardized
+            y_label = "standardized_residuals"
+        else:
+            residuals = self.lm.residuals
+            y_label = "residuals"
+        if absolute_value:
+            residuals = abs(residuals)
+            y_label = f"abs({y_label})"
+        if predictors is None:
+            predictors = list(range(self.lm.predictor_count))
+        plot_size = math.ceil(math.sqrt(len(predictors)))
+
+        fig, ax = plt.subplots(plot_size, plot_size)
+        for plot_index, predictor_index in enumerate(predictors):
+            if plot_size == 1:
+                ax_i = ax
+                ax_i.scatter(self.lm.x_data, residuals)
+            else:
+                ax_i = ax[plot_index // plot_size, plot_index % plot_size]
+                ax_i.scatter(self.lm.x_data[:, predictor_index], residuals)
+            ax_i.set_title(f"Predictor {predictor_index}")
+            ax_i.set_xlabel(f"x_{predictor_index}")
+            ax_i.set_ylabel(y_label)
+        plt.show()
+
+    def residual_plot(self,
+                      standardize_residuals: bool = False,
+                      absolute_value: bool = False,
+                      x_axis: Literal["fitted", "response", "index"] = "fitted"):
+        """
+        create a Residual Plot
+
+        :param standardize_residuals: set to True to standardize residuals
+        :param absolute_value: set to True to take the absolute value of the residuals
+        :param x_axis: what to plot on the x-axis
+            use "fitted" to plot y_hat
+            use "response" to plot y
+            use "index" to plot the data index
+        :return:
+        """
+        if standardize_residuals:
+            residuals = self.lm.residuals_internally_standardized
+            y_label = "standardized_residuals"
+        else:
+            residuals = self.lm.residuals
+            y_label = "residuals"
+        if absolute_value:
+            residuals = abs(residuals)
+            y_label = f"abs({y_label})"
+        if x_axis == "fitted":
+            x = self.lm.y_hat
+            x_label = "fitted values"
+        elif x_axis == "response":
+            x = self.lm.y_data
+            x_label = "response variable"
+        elif x_axis == "index":
+            x = list(range(self.lm.n))
+            x_label = "data index"
+        else:
+            raise Exception(f"Unknown Option for LinearModelPlots.residual_plot: x_axis={x_axis}")
+
+        plt.scatter(x, residuals)
+        plt.title("Residual Plot")
+        plt.xlabel(x_label)
+        plt.ylabel(y_label)
+
+    def scale_location_plot(self):
+        """
+        Create a Scale Location Plot
+
+        i.e. the sqrt(abs(standardized residuals)) vs fitted values
+        :return:
+        """
+        plt.scatter(self.lm.y_hat, np.sqrt(abs(self.lm.residuals_internally_standardized)))
+        plt.title("Scale Location")
+        plt.xlabel("fitted values")
+        plt.ylabel("sqrt(abs(standardized residuals))")
+
+    def qq_plot(self):
+        """
+        Create a QQ-Plot
+
+        i.e. Theoretical Quantiles vs. Observed Quantiles
+        Any deviations from the red line can indicate lack of normality in the residuals
+        :return:
+        """
+
+        quantiles = list(self.lm.residuals_internally_standardized)
+        quantiles.sort()
+        plt.scatter(self.lm.theoretical_quantiles, quantiles)
+        plt.plot(self.lm.theoretical_quantiles, self.lm.theoretical_quantiles, color="red")
+        plt.title("QQ-Plot")
+        plt.xlabel("theoretical quantiles")
+        plt.ylabel("observed quantiles")
+
+    def leverage_plot(self):
+        """
+        Create a Leverage Plot
+
+        i.e. plot Pii vs Index
+        :return:
+        """
+
+        plt.scatter(range(1, self.lm.n + 1), self.lm.pii)
+        plt.title("Leverage Plot")
+        plt.xlabel("index")
+        plt.ylabel("Pii")
+
+    def cooks_plot(self):
+        """
+        Create a Plot of Cook's Distance
+
+        i.e. plot Ci vs Index
+        :return:
+        """
+        plt.scatter(range(1, self.lm.n+1), self.lm.cooks_distance)
+        plt.title("Cook's Distance Plot")
+        plt.xlabel("index")
+        plt.ylabel("Ci")
