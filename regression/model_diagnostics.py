@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from typing import Optional, List, Literal
+from typing import Optional, List, Literal, Union
 from matplotlib import pyplot as plt
 from dataclasses import dataclass
 from regression.linear_regression import LinearModel
@@ -30,24 +30,36 @@ class LinearModelSummary:
         print("")
         self.correlation_summary()
 
-    def coefficient_summary(self, print_summary: bool = True) -> pd.DataFrame:
+    def coefficient_summary(self,
+                            confidence: Optional[float] = None,
+                            print_summary: bool = True) -> pd.DataFrame:
         """
         get the coefficient summary
 
         includes information about:
         beta_hat
         beta_hat_standard_error
+        lower_bound (if confidence is set)
+        upper_bound (if confidence is set)
         t_score
         p_value
+        lower_
 
+        :param confidence: if given, the confidence level for the coefficient confidence interval
+                           if not give, don't construct the confidence interval (default)
         :param print_summary: set to True to print the summary (default=True)
         :return:
         """
         df = pd.DataFrame()
         df["Beta_Hat"] = self.lm.beta_hat
         df["Beta_Hat_SE"] = self.lm.beta_hat_standard_error
+        if confidence is not None:
+            confidence_interval = self.lm.beta_hat_confidence_interval(confidence)
+            df[f"lwr ({confidence})"] = confidence_interval[0, :]
+            df[f"upr ({confidence})"] = confidence_interval[1, :]
         df["t_score"] = self.lm.beta_hat_t_score
         df["p(>|t|)"] = self.lm.beta_hat_p_values()
+
         if print_summary:
             print(df)
         return df
@@ -94,6 +106,37 @@ class LinearModelSummary:
         if self.lm.predictor_count > 1:
             df["R_Sq_Adj"] = [self.lm.r_squared_adjusted]
         df["r"] = [self.lm.correlation]
+        if print_summary:
+            print(df)
+        return df
+
+    def prediction_confidence_interval(self,
+                                       x0: Union[float, np.typing.NDArray],
+                                       confidence: float,
+                                       interval_type: Literal["confidence", "prediction"] = "confidence",
+                                       print_summary: bool = True) -> pd.DataFrame:
+        """
+        construct a summary table of a confidence or prediction interval around a fitted value
+
+        :param x0: input x-value to calculate the fitted value from
+        :param confidence:  width of confidence interval (e.g. 0.95)
+        :param interval_type: "confidence" or "prediction" (default: confidence)
+            set to "confidence" for a Confidence Interval (confidence interval of the mean response)
+            set to "prediction" for a Prediction Interval (confidence interval of the prediction)
+        :param print_summary: set to True to print the summary (default=True)
+        :return:
+        """
+        df = pd.DataFrame()
+        df["fit"] = [self.lm.predict(x0)]
+        if interval_type == "confidence":
+            bounds = self.lm.mean_response_confidence_interval(x0, confidence)
+        elif interval_type == "prediction":
+            bounds = self.lm.prediction_interval(x0, confidence)
+        else:
+            raise Exception(f"Unknown Interval Type: {interval_type}")
+        df["lower_bound"] = [bounds[0]]
+        df["upper_bound"] = [bounds[1]]
+
         if print_summary:
             print(df)
         return df
