@@ -24,13 +24,13 @@ class LinearModelSummary:
         gof summary
         :return:
         """
-        self.linear_model_coefficient_summary()
+        self.coefficient_summary()
         print("")
-        self.linear_model_variance_summary()
+        self.anova_summary()
         print("")
-        self.linear_model_gof_summary()
+        self.correlation_summary()
 
-    def linear_model_coefficient_summary(self, print_summary: bool = True) -> pd.DataFrame:
+    def coefficient_summary(self, print_summary: bool = True) -> pd.DataFrame:
         """
         get the coefficient summary
 
@@ -52,51 +52,44 @@ class LinearModelSummary:
             print(df)
         return df
 
-    def linear_model_variance_summary(self, print_summary: bool = True) -> pd.DataFrame:
+    def anova_summary(self, print_summary: bool = True) -> pd.DataFrame:
         """
-        get the variance summary
+        get the anova table
 
         includes the following:
-        sst
-        ssr
-        sse
-        sigma_sq_hat
+        SSR  SSR_df MSR  F-Test p(F>1)
+        SSE  SSE_df MSE
+        SST  SST_df MST
 
         :param print_summary: set to True to print the summary (default=True)
         :return:
         """
-        df = pd.DataFrame()
-        df["SST"] = [self.lm.sst]
-        df["SSR"] = [self.lm.ssr]
-        df["SSE"] = [self.lm.sse]
 
-        df["Sigma_Sq_Hat"] = [self.lm.sigma_hat_squared]
+        df = pd.DataFrame()
+        df["Source"] = ["Regression", "Residuals", "Total"]
+        df["Sum of Squares"] = [self.lm.ssr, self.lm.sse, self.lm.sst]
+        df["df"] = [self.lm.predictor_count, self.lm.df, self.lm.n - 1]
+        df["Mean Square"] = [self.lm.msr, self.lm.mse, self.lm.mst]
+        df["F_score"] = [self.lm.general_f_score, np.nan, np.nan]
+        df["p(F>1)"] = [self.lm.general_f_test, np.nan, np.nan]
 
         if print_summary:
             print(df)
         return df
 
-    def linear_model_gof_summary(self, print_summary: bool = True) -> pd.DataFrame:
+    def correlation_summary(self, print_summary: bool = True) -> pd.DataFrame:
         """
-        get the goodness of fit summary
+        get the correlation summary
 
         includes the following:
-        General F-test score
-        General F-Test p-value
-        first degree of freedom for F-Test (model degrees of freedom)
-        second degree of freedom for F-Test (reduced model degrees of freedom: ie predictor count)
         R_sq value
+        R_sq_adj value (if multiple predictors)
         correlation coefficient (r)
 
         :param print_summary: set to True to print the summary (default=True)
         :return:
         """
         df = pd.DataFrame()
-        df["F"] = [self.lm.general_f_score]
-        df["p(F>1)"] = [self.lm.general_f_test]
-        df["df1"] = [self.lm.df]
-        df["df2"] = [self.lm.predictor_count]
-
         df["R_Sq"] = [self.lm.r_squared]
         if self.lm.predictor_count > 1:
             df["R_Sq_Adj"] = [self.lm.r_squared_adjusted]

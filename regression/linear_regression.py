@@ -92,7 +92,7 @@ class LinearModel:
     def df(self) -> int:
         """
         degrees of freedom
-        df = n - 2
+        df = n - p - 1
         """
         return self.n - self.parameter_count
 
@@ -173,10 +173,35 @@ class LinearModel:
     @cached_property
     def sse(self) -> float:
         """
-        Sum of Squared errors
+        Sum of Squared Errors
         SSE := sum(residuals**2)
         """
         return float(sum(self.residuals**2))
+
+    @cached_property
+    def mst(self) -> float:
+        """
+        Mean Sum of Squares Total
+        MST := SST / df where df = n - 1
+        :return:
+        """
+        return self.sst / (self.n - 1)
+
+    @cached_property
+    def msr(self) -> float:
+        """
+        Mean Sum of Squares due to Regression
+        MSR := MSR / df where df = p = predictor_count
+        """
+        return self.ssr / self.predictor_count
+
+    @cached_property
+    def mse(self) -> float:
+        """
+        Mean Sum of Squared Errors
+        MSE := SSE / df where df = n-p-1
+        """
+        return self.sse / self.df
 
     @cached_property
     def r_squared(self) -> float:
@@ -206,9 +231,9 @@ class LinearModel:
     def sigma_hat_squared(self) -> float:
         """
         estimate for model noise
-        sigma_hat_squared := sum(residuals**2) / df = SSE/df
+        sigma_hat_squared := mse
         """
-        return self.sse / self.df
+        return self.mse
 
     @cached_property
     def beta_hat_covariance_matrix(self) -> np.typing.NDArray:
@@ -325,7 +350,7 @@ class LinearModel:
         General F Test score for this model
         """
 
-        return (self.ssr / self.predictor_count) / (self.sse / self.df)
+        return self.msr / self.mse
 
     @cached_property
     def general_f_test(self) -> float:

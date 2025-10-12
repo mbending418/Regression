@@ -1,3 +1,4 @@
+import pandas as pd
 from scipy.stats import f
 from dataclasses import dataclass
 from functools import cached_property
@@ -5,9 +6,9 @@ from regression.linear_regression import LinearModel
 
 
 @dataclass(init=True, frozen=True)
-class ANOVA:
+class NestedModelFTest:
     """
-    ANOVA test between two nested Linear Models
+    F-Test test between two nested Linear Models
     The reduced_model must be a sub-model of the full_model
     """
 
@@ -17,7 +18,7 @@ class ANOVA:
     @cached_property
     def f_score(self) -> float:
         """
-        ANOVA F Test Statistic
+        F Test Statistic
         """
         return (
             (self.reduced_model.sse - self.full_model.sse)
@@ -27,7 +28,7 @@ class ANOVA:
     @cached_property
     def p_value(self) -> float:
         """
-        ANOVA P-value
+        P-value
         """
         return float(
             (
@@ -39,3 +40,19 @@ class ANOVA:
                 )
             )
         )
+
+    def summary(self, print_summary: bool = True) -> pd.DataFrame:
+        """
+        get the Summary of the F Test
+
+        :param print_summary: set to true to print the summary (default=True)
+        :return:
+        """
+
+        df = pd.DataFrame()
+        df["F_score"] = [self.f_score]
+        df["p(F>1)"] = [self.p_value]
+
+        if print_summary:
+            print(df)
+        return df
