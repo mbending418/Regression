@@ -1,10 +1,10 @@
-import math
 import numpy as np
 import pandas as pd
 from typing import Optional, List, Literal
 from matplotlib import pyplot as plt
 from dataclasses import dataclass
 from regression.linear_regression import LinearModel
+from regression.utils.plotting import auto_size_subplots
 
 
 @dataclass(init=True, frozen=True)
@@ -146,7 +146,7 @@ class LinearModelPlots:
         if show_error_bars == "mean":
             x_min = np.amin(self.lm.x_data)
             x_max = np.amax(self.lm.x_data)
-            x_step = (x_max/x_min)/100
+            x_step = (x_max / x_min) / 100
             x = np.arange(x_min, x_max + x_step, x_step)
             interval = np.array([self.lm.mean_response_confidence_interval(x0=x0, confidence=confidence_level) for
                                  x0 in x])
@@ -156,7 +156,7 @@ class LinearModelPlots:
         elif show_error_bars == "predicted":
             x_min = np.amin(self.lm.x_data)
             x_max = np.amax(self.lm.x_data)
-            x_step = (x_max/x_min)/100
+            x_step = (x_max / x_min) / 100
             x = np.arange(x_min, x_max + x_step, x_step)
             interval = np.array([self.lm.prediction_interval(x0=x0, confidence=confidence_level) for
                                  x0 in x])
@@ -180,18 +180,25 @@ class LinearModelPlots:
         fig, ax = plt.subplots(self.lm.predictor_count + 1, self.lm.predictor_count + 1)
 
         for i in range(self.lm.predictor_count):
-            ax[0, i + 1].scatter(self.lm.x_data[:, i], self.lm.y_data)
-            ax[i + 1, 0].scatter(self.lm.x_data[:, i], self.lm.y_data)
+            if self.lm.predictor_count == 1:
+                x_data = self.lm.x_data
+            else:
+                x_data = self.lm.x_data[:, i]
+            ax[0, i + 1].scatter(x_data, self.lm.y_data)
+            ax[i + 1, 0].scatter(x_data, self.lm.y_data)
 
         for i in range(self.lm.predictor_count):
             for j in range(self.lm.predictor_count):
                 if i != j:
-                    ax[j + 1, i + 1].scatter(self.lm.x_data[:, i], self.lm.x_data[:, j])
+                    if self.lm.predictor_count == 1:
+                        ax[j + 1, i + 1].scatter(self.lm.x_data, self.lm.x_data)
+                    else:
+                        ax[j + 1, i + 1].scatter(self.lm.x_data[:, i], self.lm.x_data[:, j])
 
-        font_size = 12
-        ax[0, 0].text(0.4, 0.5, "Y", fontsize=font_size)
+        font_size = (30 // self.lm.predictor_count)+1
+        ax[0, 0].text(0.4, 0.4, "Y", fontsize=font_size)
         for i in range(self.lm.predictor_count):
-            ax[i + 1, i + 1].text(0.4, 0.5, f"X_{i + 1}", fontsize=font_size)
+            ax[i + 1, i + 1].text(0.3, 0.4, f"X_{i + 1}", fontsize=font_size)
 
         plt.show()
 
@@ -218,15 +225,16 @@ class LinearModelPlots:
             y_label = f"abs({y_label})"
         if predictors is None:
             predictors = list(range(self.lm.predictor_count))
-        plot_size = math.ceil(math.sqrt(len(predictors)))
 
-        fig, ax = plt.subplots(plot_size, plot_size)
+        plot_size = auto_size_subplots(self.lm.predictor_count)
+
+        fig, ax = plt.subplots(plot_size[1], plot_size[0])
         for plot_index, predictor_index in enumerate(predictors):
-            if plot_size == 1:
+            if max(plot_size) == 1:
                 ax_i = ax
                 ax_i.scatter(self.lm.x_data, residuals)
             else:
-                ax_i = ax[plot_index // plot_size, plot_index % plot_size]
+                ax_i = ax[plot_index // plot_size[0], plot_index % plot_size[0]]
                 ax_i.scatter(self.lm.x_data[:, predictor_index], residuals)
             ax_i.set_title(f"Predictor {predictor_index}")
             ax_i.set_xlabel(f"x_{predictor_index}")
@@ -264,7 +272,7 @@ class LinearModelPlots:
             x = self.lm.y_data
             x_label = "response variable"
         elif x_axis == "index":
-            x = list(range(self.lm.n))
+            x = np.array(range(self.lm.n), np.float64)
             x_label = "data index"
         else:
             raise Exception(f"Unknown Option for LinearModelPlots.residual_plot: x_axis={x_axis}")
