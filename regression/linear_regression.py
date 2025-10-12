@@ -22,6 +22,7 @@ class LinearModel:
     y_data should be a 1D np.typing.NDArray
     with the same length as there are rows in x_data
     """
+
     x_data: np.typing.NDArray
     y_data: np.typing.NDArray
 
@@ -43,9 +44,11 @@ class LinearModel:
             )
 
     @staticmethod
-    def load_from_data_frame(df: pd.DataFrame,
-                             response_variable: Union[str, int] = 0,
-                             predictors: Optional[Union[List[str], List[int]]] = None) -> "LinearModel":
+    def load_from_data_frame(
+        df: pd.DataFrame,
+        response_variable: Union[str, int] = 0,
+        predictors: Optional[Union[List[str], List[int]]] = None,
+    ) -> "LinearModel":
         """
 
         :param df:
@@ -60,7 +63,9 @@ class LinearModel:
             y_data = df[response_variable]
             col = response_variable
         else:
-            raise TypeError(f"for response_variable, Expected Type 'int' or 'float', got {type(response_variable)}")
+            raise TypeError(
+                f"for response_variable, Expected Type 'int' or 'float', got {type(response_variable)}"
+            )
 
         if predictors is None or len(predictors) == 0:
             predictors = [name for name in list(df.columns) if name != col]
@@ -68,23 +73,31 @@ class LinearModel:
         p_type = type(predictors[0])
         for predictor in predictors:
             if not isinstance(predictor, p_type):
-                TypeError(f"All predictors need to be of the same type. Got: {p_type} and {predictor}")
+                TypeError(
+                    f"All predictors need to be of the same type. Got: {p_type} and {predictor}"
+                )
 
         if isinstance(predictors[0], int):
-            predictors = [name for index, name in enumerate(df.columns) if index in predictors]
+            predictors = [
+                name for index, name in enumerate(df.columns) if index in predictors
+            ]
 
         if isinstance(predictors[0], str):
             x_data = df[predictors]
         else:
-            raise TypeError(f"for predictors, Expected Type 'List[int]' or 'List[str]', got {type(predictors[0])}")
+            raise TypeError(
+                f"for predictors, Expected Type 'List[int]' or 'List[str]', got {type(predictors[0])}"
+            )
 
         return LinearModel(np.array(x_data, np.float64), np.array(y_data, np.float64))
 
     @staticmethod
-    def load_from_csv(csv_file: str,
-                      delimiter: str = ",",
-                      response_variable: Union[str, int] = 0,
-                      predictors: Optional[Union[List[str], List[int]]] = None) -> "LinearModel":
+    def load_from_csv(
+        csv_file: str,
+        delimiter: str = ",",
+        response_variable: Union[str, int] = 0,
+        predictors: Optional[Union[List[str], List[int]]] = None,
+    ) -> "LinearModel":
         """
 
         :param csv_file:
@@ -94,9 +107,9 @@ class LinearModel:
         :return:
         """
         df = pd.read_csv(csv_file, delimiter=delimiter)
-        return LinearModel.load_from_data_frame(df,
-                                                response_variable=response_variable,
-                                                predictors=predictors)
+        return LinearModel.load_from_data_frame(
+            df, response_variable=response_variable, predictors=predictors
+        )
 
     @cached_property
     def dtype(self) -> np.dtype:
