@@ -12,6 +12,7 @@ class LinearModelSummary:
     """
     Class for Summarizing a Linear Model
     """
+
     lm: LinearModel
 
     def print_full_summary(self):
@@ -30,9 +31,9 @@ class LinearModelSummary:
         print("")
         self.correlation_summary()
 
-    def coefficient_summary(self,
-                            confidence: Optional[float] = None,
-                            print_summary: bool = True) -> pd.DataFrame:
+    def coefficient_summary(
+        self, confidence: Optional[float] = None, print_summary: bool = True
+    ) -> pd.DataFrame:
         """
         get the coefficient summary
 
@@ -110,11 +111,13 @@ class LinearModelSummary:
             print(df)
         return df
 
-    def prediction_confidence_interval(self,
-                                       x0: Union[float, np.typing.NDArray],
-                                       confidence: float,
-                                       interval_type: Literal["confidence", "prediction"] = "confidence",
-                                       print_summary: bool = True) -> pd.DataFrame:
+    def prediction_confidence_interval(
+        self,
+        x0: Union[float, np.typing.NDArray],
+        confidence: float,
+        interval_type: Literal["confidence", "prediction"] = "confidence",
+        print_summary: bool = True,
+    ) -> pd.DataFrame:
         """
         construct a summary table of a confidence or prediction interval around a fitted value
 
@@ -147,13 +150,16 @@ class LinearModelPlots:
     """
     Class for creating Diagnostic Plots for a Linear Model
     """
+
     lm: LinearModel
 
-    def simple_linear_regression_plot(self,
-                                      show_scatter_plot: bool = True,
-                                      show_regression_line: bool = False,
-                                      show_error_bars: Optional[Literal["mean", "predicted"]] = None,
-                                      confidence_level: float = .95):
+    def simple_linear_regression_plot(
+        self,
+        show_scatter_plot: bool = True,
+        show_regression_line: bool = False,
+        show_error_bars: Optional[Literal["mean", "predicted"]] = None,
+        confidence_level: float = 0.95,
+    ):
         """
         For a Simple Linear Model (one predictor)
         optionally plot the y vs. x scatterplot (default: True)
@@ -170,8 +176,10 @@ class LinearModelPlots:
         :return:
         """
         if self.lm.predictor_count > 1:
-            raise Exception("Predictor Count for LinearModel must be 1 for a simple linear regression plot. "
-                            "Try LinearModelPlots.matrix_plot for Multi-Linear Regression")
+            raise Exception(
+                "Predictor Count for LinearModel must be 1 for a simple linear regression plot. "
+                "Try LinearModelPlots.matrix_plot for Multi-Linear Regression"
+            )
         legend = []
         if show_scatter_plot:
             plt.scatter(self.lm.x_data, self.lm.y_data)
@@ -184,8 +192,14 @@ class LinearModelPlots:
             x_max = np.amax(self.lm.x_data)
             x_step = (x_max / x_min) / 100
             x = np.arange(x_min, x_max + x_step, x_step)
-            interval = np.array([self.lm.mean_response_confidence_interval(x0=x0, confidence=confidence_level) for
-                                 x0 in x])
+            interval = np.array(
+                [
+                    self.lm.mean_response_confidence_interval(
+                        x0=x0, confidence=confidence_level
+                    )
+                    for x0 in x
+                ]
+            )
             plt.plot(x, interval[:, 0], color="green")
             plt.plot(x, interval[:, 1], color="green")
             legend.append("Confidence Interval")
@@ -194,8 +208,12 @@ class LinearModelPlots:
             x_max = np.amax(self.lm.x_data)
             x_step = (x_max / x_min) / 100
             x = np.arange(x_min, x_max + x_step, x_step)
-            interval = np.array([self.lm.prediction_interval(x0=x0, confidence=confidence_level) for
-                                 x0 in x])
+            interval = np.array(
+                [
+                    self.lm.prediction_interval(x0=x0, confidence=confidence_level)
+                    for x0 in x
+                ]
+            )
             plt.plot(x, interval[:, 0], color="green")
             plt.plot(x, interval[:, 1], color="green")
             legend.append("Prediction Interval")
@@ -229,19 +247,23 @@ class LinearModelPlots:
                     if self.lm.predictor_count == 1:
                         ax[j + 1, i + 1].scatter(self.lm.x_data, self.lm.x_data)
                     else:
-                        ax[j + 1, i + 1].scatter(self.lm.x_data[:, i], self.lm.x_data[:, j])
+                        ax[j + 1, i + 1].scatter(
+                            self.lm.x_data[:, i], self.lm.x_data[:, j]
+                        )
 
-        font_size = (30 // self.lm.predictor_count)+1
+        font_size = (30 // self.lm.predictor_count) + 1
         ax[0, 0].text(0.4, 0.4, "Y", fontsize=font_size)
         for i in range(self.lm.predictor_count):
             ax[i + 1, i + 1].text(0.3, 0.4, f"X_{i + 1}", fontsize=font_size)
 
         plt.show()
 
-    def predictor_residual_plot(self,
-                                predictors: Optional[List[int]] = None,
-                                standardize_residuals: bool = False,
-                                absolute_value: bool = False):
+    def predictor_residual_plot(
+        self,
+        predictors: Optional[List[int]] = None,
+        standardize_residuals: bool = False,
+        absolute_value: bool = False,
+    ):
         """
         plot the residuals vs predictors
 
@@ -277,10 +299,12 @@ class LinearModelPlots:
             ax_i.set_ylabel(y_label)
         plt.show()
 
-    def residual_plot(self,
-                      standardize_residuals: bool = False,
-                      absolute_value: bool = False,
-                      x_axis: Literal["fitted", "response", "index"] = "fitted"):
+    def residual_plot(
+        self,
+        standardize_residuals: bool = False,
+        absolute_value: bool = False,
+        x_axis: Literal["fitted", "response", "index"] = "fitted",
+    ):
         """
         create a Residual Plot
 
@@ -311,7 +335,9 @@ class LinearModelPlots:
             x = np.array(range(self.lm.n), np.float64)
             x_label = "data index"
         else:
-            raise Exception(f"Unknown Option for LinearModelPlots.residual_plot: x_axis={x_axis}")
+            raise Exception(
+                f"Unknown Option for LinearModelPlots.residual_plot: x_axis={x_axis}"
+            )
 
         plt.scatter(x, residuals)
         plt.title("Residual Plot")
@@ -325,7 +351,9 @@ class LinearModelPlots:
         i.e. the sqrt(abs(standardized residuals)) vs fitted values
         :return:
         """
-        plt.scatter(self.lm.y_hat, np.sqrt(abs(self.lm.residuals_internally_standardized)))
+        plt.scatter(
+            self.lm.y_hat, np.sqrt(abs(self.lm.residuals_internally_standardized))
+        )
         plt.title("Scale Location")
         plt.xlabel("fitted values")
         plt.ylabel("sqrt(abs(standardized residuals))")
@@ -342,7 +370,9 @@ class LinearModelPlots:
         quantiles = list(self.lm.residuals_internally_standardized)
         quantiles.sort()
         plt.scatter(self.lm.theoretical_quantiles, quantiles)
-        plt.plot(self.lm.theoretical_quantiles, self.lm.theoretical_quantiles, color="red")
+        plt.plot(
+            self.lm.theoretical_quantiles, self.lm.theoretical_quantiles, color="red"
+        )
         plt.title("QQ-Plot")
         plt.xlabel("theoretical quantiles")
         plt.ylabel("observed quantiles")
