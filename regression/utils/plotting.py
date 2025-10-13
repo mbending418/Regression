@@ -1,8 +1,7 @@
-from typing import Tuple
 import math
 
 
-def auto_size_subplots(subplot_count: int) -> Tuple[int, int]:
+def auto_size_subplots(subplot_count: int) -> tuple[int, int]:
     """
     automatically determine the optimal subplot size from how many subplots there are
 

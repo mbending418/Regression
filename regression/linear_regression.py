@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import math
 
-from typing import Literal, Optional, Union, List
+from typing import Literal
 from scipy.stats import norm, t, f
 from dataclasses import dataclass
 from functools import cached_property
@@ -46,8 +46,8 @@ class LinearModel:
     @staticmethod
     def load_from_data_frame(
         df: pd.DataFrame,
-        response_variable: Union[str, int] = 0,
-        predictors: Optional[Union[List[str], List[int]]] = None,
+        response_variable: str | int = 0,
+        predictors: list[str] | list[int] | None = None,
     ) -> "LinearModel":
         """
 
@@ -95,8 +95,8 @@ class LinearModel:
     def load_from_csv(
         csv_file: str,
         delimiter: str = ",",
-        response_variable: Union[str, int] = 0,
-        predictors: Optional[Union[List[str], List[int]]] = None,
+        response_variable: str | int = 0,
+        predictors: list[str] | list[int] | None = None,
     ) -> "LinearModel":
         """
 
@@ -431,7 +431,7 @@ class LinearModel:
         """
         return float((1 - f.cdf(self.general_f_score, self.predictor_count, self.df)))
 
-    def predict(self, x0: Union[float, np.typing.NDArray]) -> float:
+    def predict(self, x0: float | np.typing.NDArray) -> float:
         """
         returns the predicted value of the model at x0
 
@@ -449,9 +449,7 @@ class LinearModel:
         x0 = np.concat((np.array([1]), x0))
         return float((x0 @ self.beta_hat))
 
-    def predicted_value_standard_error(
-        self, x0: Union[float, np.typing.NDArray]
-    ) -> float:
+    def predicted_value_standard_error(self, x0: float | np.typing.NDArray) -> float:
         """
         returns the standard error for the predicted value of the model at x0
 
@@ -469,9 +467,7 @@ class LinearModel:
         x0 = np.concat((np.array([1]), x0))
         return float(math.sqrt(self.sigma_hat_squared * (1 + x0 @ self.c_matrix @ x0)))
 
-    def mean_response_standard_error(
-        self, x0: Union[float, np.typing.NDArray]
-    ) -> float:
+    def mean_response_standard_error(self, x0: float | np.typing.NDArray) -> float:
         """
         returns the standard error for the average predicted value of the model at x0
 
@@ -485,7 +481,7 @@ class LinearModel:
 
     def beta_hat_p_values(
         self,
-        offsets: Optional[np.typing.NDArray] = None,
+        offsets: np.typing.NDArray | None = None,
         sided: Literal["one-sided", "two-sided"] = "two-sided",
     ) -> np.typing.NDArray:
         """
@@ -522,7 +518,7 @@ class LinearModel:
         )
 
     def prediction_interval(
-        self, x0: Union[float, np.typing.NDArray], confidence: float
+        self, x0: float | np.typing.NDArray, confidence: float
     ) -> np.typing.NDArray:
         """
         prediction interval around x0
@@ -541,7 +537,7 @@ class LinearModel:
         )
 
     def mean_response_confidence_interval(
-        self, x0: Union[float, np.typing.NDArray], confidence: float
+        self, x0: float | np.typing.NDArray, confidence: float
     ) -> np.typing.NDArray:
         """
         confidence interval around x0

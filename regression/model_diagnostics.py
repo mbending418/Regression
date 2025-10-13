@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from typing import Optional, List, Literal, Union
+from typing import Literal
 from matplotlib import pyplot as plt
 from dataclasses import dataclass
 from regression.linear_regression import LinearModel
@@ -32,7 +32,7 @@ class LinearModelSummary:
         self.correlation_summary()
 
     def coefficient_summary(
-        self, confidence: Optional[float] = None, print_summary: bool = True
+        self, confidence: float | None = None, print_summary: bool = True
     ) -> pd.DataFrame:
         """
         get the coefficient summary
@@ -113,7 +113,7 @@ class LinearModelSummary:
 
     def prediction_confidence_interval(
         self,
-        x0: Union[float, np.typing.NDArray],
+        x0: float | np.typing.NDArray,
         confidence: float,
         interval_type: Literal["confidence", "prediction"] = "confidence",
         print_summary: bool = True,
@@ -157,7 +157,7 @@ class LinearModelPlots:
         self,
         show_scatter_plot: bool = True,
         show_regression_line: bool = False,
-        show_error_bars: Optional[Literal["mean", "predicted"]] = None,
+        show_error_bars: Literal["mean", "predicted"] | None = None,
         confidence_level: float = 0.95,
     ):
         """
@@ -260,7 +260,7 @@ class LinearModelPlots:
 
     def predictor_residual_plot(
         self,
-        predictors: Optional[List[int]] = None,
+        predictors: list[int] | None = None,
         standardize_residuals: bool = False,
         absolute_value: bool = False,
     ):
