@@ -288,6 +288,39 @@ class LinearModel:
         """
         return 1 - (self.sse / self.df) / (self.sst / (self.n - 1))
 
+    def mallows_criterion(self, sigma_hat_sq_full_model: float) -> float:
+        """
+        mallow's criterion for model selection
+
+        C_p = SSE_p/sigma_hat_sq + (2*p - n)
+
+        :param sigma_hat_sq_full_model: the sigma_hat_sq for the full model
+        :return:
+        """
+        return self.sse / sigma_hat_sq_full_model + (2 * self.parameter_count - self.n)
+
+    @cached_property
+    def akaike_information_criterion(self) -> float:
+        """
+        Akaike Information Criterion (AIC)
+
+        AIC_p = n * ln(SSE_p/n) + 2*p
+        :return:
+        """
+        return self.n * math.log(self.sse / self.n) + 2 * self.parameter_count
+
+    @cached_property
+    def bayes_information_criterion(self) -> float:
+        """
+        Baye's Information Criterion (BIC)
+
+        BIC_p = n * ln(SSE_p/n) * p*ln(n)
+        :return:
+        """
+        return self.n * math.log(self.sse / self.n) + self.parameter_count * math.log(
+            self.n
+        )
+
     @cached_property
     def correlation(self) -> float:
         """
