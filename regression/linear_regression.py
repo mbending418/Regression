@@ -111,6 +111,15 @@ class LinearModel:
             df, response_variable=response_variable, predictors=predictors
         )
 
+    def get_sub_model(self, predictors: tuple[int]) -> "LinearModel":
+        """
+        return a linear model with a subset of the predictors
+
+        :param predictors: which predictors to keep
+        :return:
+        """
+        return LinearModel(self.x_data[:, predictors], self.y_data)
+
     @cached_property
     def dtype(self) -> np.dtype:
         """
