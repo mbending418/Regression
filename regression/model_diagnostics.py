@@ -20,16 +20,32 @@ class LinearModelSummary:
         print a full model summary
 
         includes:
+        model equation
         coefficient summary
         variance summary
         gof summary
         :return:
         """
+        print(self.model_equation())
+        print("")
         self.coefficient_summary()
         print("")
         self.anova_summary()
         print("")
         self.comparison_criterion_summary()
+
+    def model_equation(self, digits: int = 4) -> str:
+        """
+        get the model equation
+
+        :param digits: how many digits to round to
+        :return:
+        """
+        betas = [round(float(beta), digits) for beta in self.lm.beta_hat]
+        equation = f"y_hat = {betas[0]}"
+        for index, beta in enumerate(betas[1:]):
+            equation += f" + {beta}*x_{index}"
+        return equation
 
     def coefficient_summary(
         self, confidence: float | None = None, print_summary: bool = True
