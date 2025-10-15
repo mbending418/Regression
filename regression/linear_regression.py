@@ -336,7 +336,10 @@ class LinearModel:
         correlation between x and y
         r = sqrt(R^squared) with the same sign as B1
         """
-        return float(math.sqrt(self.r_squared) * np.sign(self.beta_hat[1]))
+        if self.predictor_count == 1:
+            return float(math.sqrt(self.r_squared) * np.sign(self.beta_hat[1]))
+        else:
+            raise TypeError(f"Only single predictor models can have correlation: p={self.predictor_count}")
 
     @cached_property
     def sigma_hat_squared(self) -> float:

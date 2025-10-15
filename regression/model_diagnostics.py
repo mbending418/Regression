@@ -97,16 +97,21 @@ class LinearModelSummary:
         get the correlation summary
 
         includes the following:
+        correlation coefficient (if single predictor)
         R_sq value
+        SSE
         R_sq_adj value (if multiple predictors)
-        correlation coefficient (r)
+        Cp
+        AIC
+        BIC
 
         :param sigma_hat_squared_full_model: the sigma_hat_sq for the full model (optional)
         :param print_summary: set to True to print the summary (default=True)
         :return:
         """
         df = pd.DataFrame()
-        df["r"] = [self.lm.correlation]
+        if self.lm.predictor_count == 1:
+            df["r"] = [self.lm.correlation]
         df["R_Sq"] = [self.lm.r_squared]
         df["SSE"] = [self.lm.sse]
         if self.lm.predictor_count > 1:
