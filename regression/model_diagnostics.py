@@ -29,7 +29,7 @@ class LinearModelSummary:
         print("")
         self.anova_summary()
         print("")
-        self.correlation_summary()
+        self.comparison_criterion_summary()
 
     def coefficient_summary(
         self, confidence: float | None = None, print_summary: bool = True
@@ -90,7 +90,9 @@ class LinearModelSummary:
             print(df)
         return df
 
-    def correlation_summary(self, print_summary: bool = True) -> pd.DataFrame:
+    def comparison_criterion_summary(self,
+                                     sigma_hat_squared_full_model: float | None = None,
+                                     print_summary: bool = True) -> pd.DataFrame:
         """
         get the correlation summary
 
@@ -99,14 +101,21 @@ class LinearModelSummary:
         R_sq_adj value (if multiple predictors)
         correlation coefficient (r)
 
+        :param sigma_hat_squared_full_model: the sigma_hat_sq for the full model (optional)
         :param print_summary: set to True to print the summary (default=True)
         :return:
         """
         df = pd.DataFrame()
+        df["r"] = [self.lm.correlation]
         df["R_Sq"] = [self.lm.r_squared]
+        df["SSE"] = [self.lm.sse]
         if self.lm.predictor_count > 1:
             df["R_Sq_Adj"] = [self.lm.r_squared_adjusted]
-        df["r"] = [self.lm.correlation]
+        if sigma_hat_squared_full_model is not None:
+            df["Cp"] = [self.lm.mallows_criterion(sigma_hat_squared_full_model)]
+        df["AIC"] = [self.lm.akaike_information_criterion]
+        df["BIC"] = [self.lm.bayes_information_criterion]
+
         if print_summary:
             print(df)
         return df

@@ -297,16 +297,16 @@ class LinearModel:
         """
         return 1 - (self.sse / self.df) / (self.sst / (self.n - 1))
 
-    def mallows_criterion(self, sigma_hat_sq_full_model: float) -> float:
+    def mallows_criterion(self, sigma_hat_squared_full_model: float) -> float:
         """
         mallow's criterion for model selection
 
         C_p = SSE_p/sigma_hat_sq + (2*p - n)
 
-        :param sigma_hat_sq_full_model: the sigma_hat_sq for the full model
+        :param sigma_hat_squared_full_model: the sigma_hat_sq for the full model
         :return:
         """
-        return self.sse / sigma_hat_sq_full_model + (2 * self.parameter_count - self.n)
+        return self.sse / sigma_hat_squared_full_model + (2 * self.parameter_count - self.n)
 
     @cached_property
     def akaike_information_criterion(self) -> float:
