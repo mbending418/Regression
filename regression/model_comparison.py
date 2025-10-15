@@ -42,7 +42,7 @@ class NestedModelFTest:
         sse_diff / df_diff
         :return:
         """
-        return self.sse_diff/self.df_diff
+        return self.sse_diff / self.df_diff
 
     @cached_property
     def f_score(self) -> float:
@@ -77,9 +77,17 @@ class NestedModelFTest:
 
         df = pd.DataFrame()
         df["Source"] = ["Full Model", "Reduced Model", "Difference"]
-        df["Sum Square Error (SSE)"] = [self.full_model.sse, self.reduced_model.sse, self.sse_diff]
+        df["Sum Square Error (SSE)"] = [
+            self.full_model.sse,
+            self.reduced_model.sse,
+            self.sse_diff,
+        ]
         df["df"] = [self.full_model.df, self.reduced_model.df, self.df_diff]
-        df["Mean Square Error (MSE)"] = [self.full_model.mse, self.reduced_model.mse, self.mse_diff]
+        df["Mean Square Error (MSE)"] = [
+            self.full_model.mse,
+            self.reduced_model.mse,
+            self.mse_diff,
+        ]
         df["F_score"] = [np.nan, np.nan, self.f_score]
         df["p(>F)"] = [np.nan, np.nan, self.p_value]
 
