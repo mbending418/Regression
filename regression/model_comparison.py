@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 from itertools import combinations
 from typing import Iterator, Literal
 from scipy.stats import f
@@ -19,14 +20,36 @@ class NestedModelFTest:
     reduced_model: LinearModel
 
     @cached_property
+    def sse_diff(self) -> float:
+        """
+        SSE_f - SSE_r
+        (SSE for full model - SSE for reduced model)
+        :return:
+        """
+        return self.reduced_model.sse - self.full_model.sse
+
+    @cached_property
+    def df_diff(self) -> float:
+        """
+        full_model_df - reduced_model_df
+        :return:
+        """
+        return self.reduced_model.df - self.full_model.df
+
+    @cached_property
+    def mse_diff(self) -> float:
+        """
+        sse_diff / df_diff
+        :return:
+        """
+        return self.sse_diff/self.df_diff
+
+    @cached_property
     def f_score(self) -> float:
         """
         F Test Statistic
         """
-        return (
-            (self.reduced_model.sse - self.full_model.sse)
-            / (self.reduced_model.df - self.full_model.df)
-        ) / (self.full_model.sse / self.full_model.df)
+        return self.mse_diff / self.full_model.mse
 
     @cached_property
     def p_value(self) -> float:
@@ -38,7 +61,7 @@ class NestedModelFTest:
                 1
                 - f.cdf(
                     self.f_score,
-                    self.reduced_model.df - self.full_model.df,
+                    abs(self.df_diff),
                     self.full_model.df,
                 )
             )
@@ -53,8 +76,12 @@ class NestedModelFTest:
         """
 
         df = pd.DataFrame()
-        df["F_score"] = [self.f_score]
-        df["p(F>1)"] = [self.p_value]
+        df["Source"] = ["Full Model", "Reduced Model", "Difference"]
+        df["Sum Square Error (SSE)"] = [self.full_model.sse, self.reduced_model.sse, self.sse_diff]
+        df["df"] = [self.full_model.df, self.reduced_model.df, self.df_diff]
+        df["Mean Square Error (MSE)"] = [self.full_model.mse, self.reduced_model.mse, self.mse_diff]
+        df["F_score"] = [np.nan, np.nan, self.f_score]
+        df["p(>F)"] = [np.nan, np.nan, self.p_value]
 
         if print_summary:
             print(df)
