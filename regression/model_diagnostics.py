@@ -100,7 +100,7 @@ class LinearModelSummary:
         df["df"] = [self.lm.predictor_count, self.lm.df, self.lm.n - 1]
         df["Mean Square"] = [self.lm.msr, self.lm.mse, self.lm.mst]
         df["F_score"] = [self.lm.general_f_score, np.nan, np.nan]
-        df["p(F>1)"] = [self.lm.general_f_test, np.nan, np.nan]
+        df["p(>F)"] = [self.lm.general_f_test, np.nan, np.nan]
 
         if print_summary:
             print(df)
