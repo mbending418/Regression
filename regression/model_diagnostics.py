@@ -90,9 +90,11 @@ class LinearModelSummary:
             print(df)
         return df
 
-    def comparison_criterion_summary(self,
-                                     sigma_hat_squared_full_model: float | None = None,
-                                     print_summary: bool = True) -> pd.DataFrame:
+    def comparison_criterion_summary(
+        self,
+        sigma_hat_squared_full_model: float | None = None,
+        print_summary: bool = True,
+    ) -> pd.DataFrame:
         """
         get the correlation summary
 

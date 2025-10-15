@@ -111,7 +111,7 @@ class LinearModel:
             df, response_variable=response_variable, predictors=predictors
         )
 
-    def get_sub_model(self, predictors: tuple[int]) -> "LinearModel":
+    def get_sub_model(self, predictors: tuple[int, ...]) -> "LinearModel":
         """
         return a linear model with a subset of the predictors
 
@@ -306,7 +306,9 @@ class LinearModel:
         :param sigma_hat_squared_full_model: the sigma_hat_sq for the full model
         :return:
         """
-        return self.sse / sigma_hat_squared_full_model + (2 * self.parameter_count - self.n)
+        return self.sse / sigma_hat_squared_full_model + (
+            2 * self.parameter_count - self.n
+        )
 
     @cached_property
     def akaike_information_criterion(self) -> float:
@@ -339,7 +341,9 @@ class LinearModel:
         if self.predictor_count == 1:
             return float(math.sqrt(self.r_squared) * np.sign(self.beta_hat[1]))
         else:
-            raise TypeError(f"Only single predictor models can have correlation: p={self.predictor_count}")
+            raise TypeError(
+                f"Only single predictor models can have correlation: p={self.predictor_count}"
+            )
 
     @cached_property
     def sigma_hat_squared(self) -> float:
