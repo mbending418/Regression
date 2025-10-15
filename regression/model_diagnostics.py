@@ -100,7 +100,7 @@ class LinearModelSummary:
         correlation coefficient (if single predictor)
         R_sq value
         SSE
-        R_sq_adj value (if multiple predictors)
+        R_sq_adj value
         Cp
         AIC
         BIC
@@ -114,8 +114,7 @@ class LinearModelSummary:
             df["r"] = [self.lm.correlation]
         df["R_Sq"] = [self.lm.r_squared]
         df["SSE"] = [self.lm.sse]
-        if self.lm.predictor_count > 1:
-            df["R_Sq_Adj"] = [self.lm.r_squared_adjusted]
+        df["R_Sq_Adj"] = [self.lm.r_squared_adjusted]
         if sigma_hat_squared_full_model is not None:
             df["Cp"] = [self.lm.mallows_criterion(sigma_hat_squared_full_model)]
         df["AIC"] = [self.lm.akaike_information_criterion]
