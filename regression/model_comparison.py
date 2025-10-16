@@ -118,8 +118,82 @@ class LinearSubModels:
             df = pd.concat([df, summary], ignore_index=True)
         return df
 
+    def forward_selection_step(
+        self,
+        current_parameters: tuple[int, ...],
+        criterion: Literal["R_sq", "SSE", "R_sq_adj", "Cp", "AIC", "BIC"],
+    ) -> tuple[int, ...] | None:
+        if criterion in ["R_sq", "R_sq_adj"]:
+            maximize = True
+        elif criterion in ["SSE", "Cp", "AIC", "BIC"]:
+            maximize = False
+        else:
+            raise TypeError(f"Unknown model criterion: {criterion}")
+
+        best_parameters: tuple[int, ...] | None = None
+        best_score: float | None = None
+        for new_parameter in range(self.full_model.predictor_count):
+            if new_parameter in current_parameters:
+                continue
+            candidate_parameters = current_parameters + (new_parameter,)
+            candidate_model = self.full_model.get_sub_model(candidate_parameters)
+            candidate_summary = LinearModelSummary(
+                candidate_model
+            ).comparison_criterion_summary(
+                sigma_hat_squared_full_model=self.full_model.sigma_hat_squared,
+                print_summary=False,
+            )
+            candidate_score = candidate_summary[criterion].iloc[0]
+            if (
+                (best_score is None)
+                or (maximize and candidate_score > best_score)
+                or (not maximize and candidate_score < best_score)
+            ):
+                best_parameters = candidate_parameters
+                best_score = candidate_score
+        return best_parameters
+
+    def backward_elimination_step(
+        self,
+        current_parameters: tuple[int, ...],
+        criterion: Literal["R_sq", "SSE", "R_sq_adj", "Cp", "AIC", "BIC"],
+    ) -> tuple[int, ...] | None:
+        if criterion in ["R_sq", "R_sq_adj"]:
+            maximize = True
+        elif criterion in ["SSE", "Cp", "AIC", "BIC"]:
+            maximize = False
+        else:
+            raise TypeError(f"Unknown model criterion: {criterion}")
+
+        best_parameters: tuple[int, ...] | None = None
+        best_score: float | None = None
+        for removed_parameter in range(self.full_model.predictor_count):
+            if removed_parameter not in current_parameters:
+                continue
+            temp = list(current_parameters)
+            temp.remove(removed_parameter)
+            candidate_parameters = tuple(temp)
+            candidate_model = self.full_model.get_sub_model(candidate_parameters)
+            candidate_summary = LinearModelSummary(
+                candidate_model
+            ).comparison_criterion_summary(
+                sigma_hat_squared_full_model=self.full_model.sigma_hat_squared,
+                print_summary=False,
+            )
+            candidate_score = candidate_summary[criterion].iloc[0]
+            if (
+                (best_score is None)
+                or (maximize and candidate_score > best_score)
+                or (not maximize and candidate_score < best_score)
+            ):
+                best_parameters = candidate_parameters
+                best_score = candidate_score
+        return best_parameters
+
     def forward_selection_summary(
-        self, criterion: Literal["R_sq", "SSE", "R_sq_adj", "Cp", "AIC", "BIC"]
+        self,
+        criterion: Literal["R_sq", "SSE", "R_sq_adj", "Cp", "AIC", "BIC"],
+        stop_early: bool = False,
     ) -> pd.DataFrame:
         if criterion in ["R_sq", "R_sq_adj"]:
             maximize = True
@@ -131,41 +205,48 @@ class LinearSubModels:
         df = pd.DataFrame()
         parameters: tuple[int, ...] = ()
         while len(parameters) < self.full_model.predictor_count:
-            best_parameters = parameters
-            best_model = None
-            best_summary = None
-            best_score = None
-            for new_parameter in range(self.full_model.predictor_count):
-                if new_parameter in parameters:
-                    continue
-                candidate_parameters = parameters + (new_parameter,)
-                candidate_model = self.full_model.get_sub_model(candidate_parameters)
-                candidate_summary = LinearModelSummary(
-                    candidate_model
-                ).comparison_criterion_summary(
-                    sigma_hat_squared_full_model=self.full_model.sigma_hat_squared,
-                    print_summary=False,
-                )
-                candidate_score = candidate_summary[criterion].iloc[0]
-                if (
-                    best_score is None
-                    or (maximize and candidate_score > best_score)
-                    or (not maximize and candidate_score < best_score)
-                ):
-                    best_parameters = candidate_parameters
-                    best_model = candidate_model
-                    best_summary = candidate_summary
-                    best_score = candidate_score
-            if best_summary is None or best_model is None:
-                return df
-            best_summary.insert(0, "p", best_model.predictor_count)
-            best_summary.insert(0, "predictors", str(best_parameters))
-            df = pd.concat([df, best_summary], ignore_index=True)
-            parameters = best_parameters
+            # get the current model from the parameters
+            current_model = self.full_model.get_sub_model(parameters)
+            current_summary = LinearModelSummary(
+                current_model
+            ).comparison_criterion_summary(
+                sigma_hat_squared_full_model=self.full_model.sigma_hat_squared,
+                print_summary=False,
+            )
+            current_score = current_summary[criterion].iloc[0]
+
+            # find the best parameter to add then find the model and score for the new set of parameters
+            next_parameters = self.forward_selection_step(
+                current_parameters=parameters, criterion=criterion
+            )
+
+            if next_parameters is None:
+                break
+            next_model = self.full_model.get_sub_model(next_parameters)
+            next_summary = LinearModelSummary(next_model).comparison_criterion_summary(
+                sigma_hat_squared_full_model=self.full_model.sigma_hat_squared,
+                print_summary=False,
+            )
+            next_score = next_summary[criterion].iloc[0]
+
+            # if stop_early is True and the next_score doesn't beat the current score. Stop.
+            if stop_early and (
+                (maximize and next_score < current_score)
+                | (not maximize and next_score > current_score)
+            ):
+                break
+
+            # set our new parameters and add the summary to the summary dataframe
+            parameters = next_parameters
+            next_summary.insert(0, "p", next_model.predictor_count)
+            next_summary.insert(0, "predictors", str(parameters))
+            df = pd.concat([df, next_summary], ignore_index=True)
         return df
 
     def backward_elimination_summary(
-        self, criterion: Literal["R_sq", "SSE", "R_sq_adj", "Cp", "AIC", "BIC"]
+        self,
+        criterion: Literal["R_sq", "SSE", "R_sq_adj", "Cp", "AIC", "BIC"],
+        stop_early: bool = False,
     ) -> pd.DataFrame:
         if criterion in ["R_sq", "R_sq_adj"]:
             maximize = True
@@ -183,37 +264,40 @@ class LinearSubModels:
         df.insert(0, "predictors", str(parameters))
 
         while len(parameters) > 0:
-            best_parameters = parameters
-            best_model = None
-            best_summary = None
-            best_score = None
-            for removed_parameter in range(self.full_model.predictor_count):
-                if removed_parameter not in parameters:
-                    continue
-                candidate_parameters_list: list[int] = list(parameters)
-                candidate_parameters_list.remove(removed_parameter)
-                candidate_parameters: tuple[int, ...] = tuple(candidate_parameters_list)
-                candidate_model = self.full_model.get_sub_model(candidate_parameters)
-                candidate_summary = LinearModelSummary(
-                    candidate_model
-                ).comparison_criterion_summary(
-                    sigma_hat_squared_full_model=self.full_model.sigma_hat_squared,
-                    print_summary=False,
-                )
-                candidate_score = candidate_summary[criterion].iloc[0]
-                if (
-                    best_score is None
-                    or (maximize and candidate_score > best_score)
-                    or (not maximize and candidate_score < best_score)
-                ):
-                    best_parameters = candidate_parameters
-                    best_model = candidate_model
-                    best_summary = candidate_summary
-                    best_score = candidate_score
-            if best_summary is None or best_model is None:
-                return df
-            best_summary.insert(0, "p", best_model.predictor_count)
-            best_summary.insert(0, "predictors", str(best_parameters))
-            df = pd.concat([df, best_summary], ignore_index=True)
-            parameters = best_parameters
+            # get the current model from the parameters
+            current_model = self.full_model.get_sub_model(parameters)
+            current_summary = LinearModelSummary(
+                current_model
+            ).comparison_criterion_summary(
+                sigma_hat_squared_full_model=self.full_model.sigma_hat_squared,
+                print_summary=False,
+            )
+            current_score = current_summary[criterion].iloc[0]
+
+            # find the best parameter to add then find the model and score for the new set of parameters
+            next_parameters = self.backward_elimination_step(
+                current_parameters=parameters, criterion=criterion
+            )
+
+            if next_parameters is None:
+                break
+            next_model = self.full_model.get_sub_model(next_parameters)
+            next_summary = LinearModelSummary(next_model).comparison_criterion_summary(
+                sigma_hat_squared_full_model=self.full_model.sigma_hat_squared,
+                print_summary=False,
+            )
+            next_score = next_summary[criterion].iloc[0]
+
+            # if stop_early is True and the next_score doesn't beat the current score. Stop.
+            if stop_early and (
+                (maximize and next_score < current_score)
+                | (not maximize and next_score > current_score)
+            ):
+                break
+
+            # set our new parameters and add the summary to the summary dataframe
+            parameters = next_parameters
+            next_summary.insert(0, "p", next_model.predictor_count)
+            next_summary.insert(0, "predictors", str(parameters))
+            df = pd.concat([df, next_summary], ignore_index=True)
         return df
