@@ -118,6 +118,49 @@ class LinearSubModels:
             df = pd.concat([df, summary], ignore_index=True)
         return df
 
+    def unbiased_mallows_search(self) -> pd.DataFrame:
+        df = pd.DataFrame()
+        predictor_count = 0
+        best_predictors: tuple[int, ...] | None = None
+        best_model: LinearModel | None = None
+        best_score: float | None = None
+        for predictors, model in self.sub_model_generator():
+            if best_model is not None and len(predictors) > predictor_count:
+                summary = LinearModelSummary(best_model).comparison_criterion_summary(
+                    sigma_hat_squared_full_model=self.full_model.sigma_hat_squared,
+                    print_summary=False,
+                )
+                summary.insert(0, "p", best_model.predictor_count)
+                summary.insert(0, "predictors", str(best_predictors))
+                df = pd.concat([df, summary], ignore_index=True)
+
+                predictor_count = len(predictors)
+                best_predictors = None
+                best_model = None
+                best_score = None
+
+            summary = LinearModelSummary(model).comparison_criterion_summary(
+                sigma_hat_squared_full_model=self.full_model.sigma_hat_squared,
+                print_summary=False,
+            )
+            score = abs(summary["Cp"].iloc[0] - predictor_count - 1)
+
+            if best_score is None or score < best_score:
+                best_predictors = predictors
+                best_model = model
+                best_score = score
+
+        if best_model is not None:
+            summary = LinearModelSummary(best_model).comparison_criterion_summary(
+                sigma_hat_squared_full_model=self.full_model.sigma_hat_squared,
+                print_summary=False,
+            )
+            summary.insert(0, "p", best_model.predictor_count)
+            summary.insert(0, "predictors", str(best_predictors))
+            df = pd.concat([df, summary], ignore_index=True)
+
+        return df
+
     def forward_selection_step(
         self,
         current_parameters: tuple[int, ...],
