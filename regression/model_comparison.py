@@ -274,7 +274,7 @@ class LinearSubModels:
             )
             current_score = current_summary[criterion].iloc[0]
 
-            # find the best parameter to add then find the model and score for the new set of parameters
+            # find the best parameter to remove then find the model and score for the new set of parameters
             next_parameters = self.backward_elimination_step(
                 current_parameters=parameters, criterion=criterion
             )
@@ -300,4 +300,98 @@ class LinearSubModels:
             next_summary.insert(0, "p", next_model.predictor_count)
             next_summary.insert(0, "predictors", str(parameters))
             df = pd.concat([df, next_summary], ignore_index=True)
+        return df
+
+    def forward_stepwise_selection(
+        self,
+        criterion: Literal["R_sq", "SSE", "R_sq_adj", "Cp", "AIC", "BIC"],
+        loop_limit: int = 10000,
+    ) -> pd.DataFrame:
+        if criterion in ["R_sq", "R_sq_adj"]:
+            maximize = True
+        elif criterion in ["SSE", "Cp", "AIC", "BIC"]:
+            maximize = False
+        else:
+            raise TypeError(f"Unknown model criterion: {criterion}")
+
+        df = pd.DataFrame()
+        parameters: tuple[int, ...] = ()
+        for loop_count in range(loop_limit):
+            print(f"\nstart_loop {loop_count}")
+            stop_count = 0
+
+            # get the current model from the parameters
+            current_model = self.full_model.get_sub_model(parameters)
+            current_summary = LinearModelSummary(
+                current_model
+            ).comparison_criterion_summary(
+                sigma_hat_squared_full_model=self.full_model.sigma_hat_squared,
+                print_summary=False,
+            )
+
+            current_score = current_summary[criterion].iloc[0]
+
+            # forward pass
+
+            # find the best parameter to add then find the model and score for the new set of parameters
+            next_parameters = self.forward_selection_step(
+                current_parameters=parameters, criterion=criterion
+            )
+
+            if next_parameters is None:
+                next_parameters = parameters
+            next_model = self.full_model.get_sub_model(next_parameters)
+            next_summary = LinearModelSummary(next_model).comparison_criterion_summary(
+                sigma_hat_squared_full_model=self.full_model.sigma_hat_squared,
+                print_summary=False,
+            )
+            next_score = next_summary[criterion].iloc[0]
+
+            # if the next_score doesn't beat the current score. increment the stop_count and don't add this to the model
+            if (maximize and next_score < current_score) | (
+                not maximize and next_score > current_score
+            ):
+                print("dont step forward")
+                stop_count += 1
+            else:
+                # add the summary to the summary dataframe
+                next_summary.insert(0, "p", next_model.predictor_count)
+                next_summary.insert(0, "predictors", str(next_parameters))
+                df = pd.concat([df, next_summary], ignore_index=True)
+
+                # set the next parameters and score
+                parameters = next_parameters
+                current_score = next_score
+
+            # backwards pass
+
+            # find the best parameter to remove then find the model and score for the new set of parameters
+            next_parameters = self.backward_elimination_step(
+                current_parameters=parameters, criterion=criterion
+            )
+
+            if next_parameters is None:
+                next_parameters = parameters
+            next_model = self.full_model.get_sub_model(next_parameters)
+            next_summary = LinearModelSummary(next_model).comparison_criterion_summary(
+                sigma_hat_squared_full_model=self.full_model.sigma_hat_squared,
+                print_summary=False,
+            )
+            next_score = next_summary[criterion].iloc[0]
+
+            # if the next_score doesn't beat the current score. increment stop_count & don't remove this from the model
+            if (maximize and next_score < current_score) | (
+                not maximize and next_score > current_score
+            ):
+                print("don't step back9")
+                stop_count += 1
+            else:
+                # set our new parameters and add the summary to the summary dataframe
+                parameters = next_parameters
+                next_summary.insert(0, "p", next_model.predictor_count)
+                next_summary.insert(0, "predictors", str(parameters))
+                df = pd.concat([df, next_summary], ignore_index=True)
+
+            if stop_count == 2:
+                break
         return df
