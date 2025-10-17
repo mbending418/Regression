@@ -451,6 +451,26 @@ class LinearModel:
         )
 
     @cached_property
+    def welsh_and_kuh_measure(self) -> np.typing.NDArray:
+        """
+        Array of the Welsh and Kuh Measure for each data point
+        DFITSi = (externally studentized residuals) * sqrt(pii/(1-pii))
+        :return:
+        """
+        return self.residuals_externally_standardized * np.sqrt(self.pii / (1 - self.pii))
+
+    @cached_property
+    def hadis_influence_measure(self) -> np.typing.NDArray:
+        """
+        Array of the Hadi's Influence Measure for each data point
+        Hi = pii/(1-pii) + (p+1)/(1-pii) * di^2/(1-di^2)
+        di = normalized residual = ei/sqrt(SSE)
+        :return:
+        """
+        di = self.residuals / math.sqrt(self.sse)
+        return self.pii / (1 - self.pii) + self.parameter_count / (1 - self.pii) * di**2/(1-di**2)
+
+    @cached_property
     def theoretical_quantiles(self) -> np.typing.NDArray:
         """
         Array of theoretical quantiles

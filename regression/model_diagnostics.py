@@ -443,7 +443,7 @@ class LinearModelPlots:
 
     def outlier_detection(
         self,
-        plot_type=Literal["Pii", "cooks", "residual"],
+        plot_type=Literal["Pii", "cooks", "residual", "welsh_kuh", "hadis"],
         threshold: float | Literal["auto"] | None = None,
     ):
         """
@@ -473,6 +473,18 @@ class LinearModelPlots:
             data = abs(self.lm.residuals_internally_standardized)
             if threshold == "auto":
                 threshold = 3
+        elif plot_type == "welsh_kuh":
+            plt.title("Welsh and Kuh Measure")
+            plt.ylabel("DFITSi")
+            data = abs(self.lm.welsh_and_kuh_measure)
+            if threshold == "auto":
+                threshold = 2 * (self.lm.parameter_count/self.lm.df)**.5
+        elif plot_type == "hadis":
+            plt.title("Hadi's Influence Measure")
+            plt.ylabel("Hi")
+            data = self.lm.hadis_influence_measure
+            if threshold == "auto":
+                threshold = None
         else:
             raise TypeError(f"Unknown Plot Type: {plot_type}")
 
