@@ -51,9 +51,9 @@ class LinearModel:
     ) -> "LinearModel":
         """
 
-        :param df:
-        :param response_variable:
-        :param predictors:
+        :param df: data frame to load from
+        :param response_variable: name or index of response variable (default=0)
+        :param predictors: names or indexes of predictors
         :return:
         """
         if isinstance(response_variable, int):
@@ -100,10 +100,10 @@ class LinearModel:
     ) -> "LinearModel":
         """
 
-        :param csv_file:
-        :param delimiter:
-        :param response_variable:
-        :param predictors:
+        :param csv_file: csv_file to load
+        :param delimiter: delimiter for reading csv_file
+        :param response_variable: name or index of response variable
+        :param predictors: names or indexes of predictors
         :return:
         """
         df = pd.read_csv(csv_file, delimiter=delimiter)
