@@ -253,33 +253,66 @@ class LinearModelPlots:
         plt.ylabel("Y")
         plt.legend(legend)
 
-    def matrix_plot(self):
+    def matrix_plot(
+        self,
+        outliers: dict[tuple[int, ...] | int, str] | None = None,
+        point_size: float = 10.0,
+    ):
         """
         Create the Matrix Plot for a MultiLinear Model
 
         ie create a grid plotting:
          the response vs each predictor.
          each predictor vs each other predictor.
+        :param outliers: which outliers to plot (if any)
+            dictionary mapping tuple of points by index to plot to color to plot the outliers
+        :param point_size: point size on scatterplot
         :return:
         """
+        if self.lm.predictor_count == 1:
+            raise TypeError("need more than one predictor for matrix_plot")
+        if outliers is None:
+            outliers = {}
+
         fig, ax = plt.subplots(self.lm.predictor_count + 1, self.lm.predictor_count + 1)
 
         for i in range(self.lm.predictor_count):
-            if self.lm.predictor_count == 1:
-                x_data = self.lm.x_data
-            else:
-                x_data = self.lm.x_data[:, i]
-            ax[0, i + 1].scatter(x_data, self.lm.y_data)
-            ax[i + 1, 0].scatter(x_data, self.lm.y_data)
+            ax[0, i + 1].scatter(self.lm.x_data[:, i], self.lm.y_data, s=point_size)
+            ax[i + 1, 0].scatter(self.lm.y_data, self.lm.x_data[:, i], s=point_size)
+            for outlier_indexes, color in outliers.items():
+                if isinstance(outlier_indexes, int):
+                    indexes = [outlier_indexes]
+                else:
+                    indexes = list(outlier_indexes)
+                ax[0, i + 1].scatter(
+                    self.lm.x_data[indexes, i],
+                    self.lm.y_data[indexes],
+                    color=color,
+                    s=point_size,
+                )
+                ax[i + 1, 0].scatter(
+                    self.lm.y_data[indexes],
+                    self.lm.x_data[indexes, i],
+                    color=color,
+                    s=point_size,
+                )
 
         for i in range(self.lm.predictor_count):
             for j in range(self.lm.predictor_count):
                 if i != j:
-                    if self.lm.predictor_count == 1:
-                        ax[j + 1, i + 1].scatter(self.lm.x_data, self.lm.x_data)
-                    else:
+                    ax[j + 1, i + 1].scatter(
+                        self.lm.x_data[:, i], self.lm.x_data[:, j], s=point_size
+                    )
+                    for outlier_indexes, color in outliers.items():
+                        if isinstance(outlier_indexes, int):
+                            indexes = [outlier_indexes]
+                        else:
+                            indexes = list(outlier_indexes)
                         ax[j + 1, i + 1].scatter(
-                            self.lm.x_data[:, i], self.lm.x_data[:, j]
+                            self.lm.x_data[indexes, i],
+                            self.lm.x_data[indexes, j],
+                            color=color,
+                            s=point_size,
                         )
 
         font_size = (30 // self.lm.predictor_count) + 1
