@@ -441,27 +441,46 @@ class LinearModelPlots:
         plt.xlabel("theoretical quantiles")
         plt.ylabel("observed quantiles")
 
-    def leverage_plot(self):
+    def outlier_detection(
+        self,
+        plot_type=Literal["Pii", "cooks", "residual"],
+        threshold: float | Literal["auto"] | None = None,
+    ):
         """
-        Create a Leverage Plot
 
-        i.e. plot Pii vs Index
+        :param plot_type: which outlier metric to plot
+        :param threshold: automatically detect and return outliers (index) above this threshold
+               set to None to not automatically identify outliers (default option)
+               set to "auto" to use the automatic threshold for this metric
         :return:
         """
 
-        plt.scatter(range(1, self.lm.n + 1), self.lm.pii)
-        plt.title("Leverage Plot")
-        plt.xlabel("index")
-        plt.ylabel("Pii")
+        if plot_type == "Pii":
+            plt.title("Leverage Plot")
+            plt.ylabel("Pii")
+            data = self.lm.pii
+            if threshold == "auto":
+                threshold = 2 * self.lm.parameter_count / self.lm.n
+        elif plot_type == "cooks":
+            plt.title("Cook's Distance Plot")
+            plt.ylabel("Ci")
+            data = self.lm.cooks_distance
+            if threshold == "auto":
+                threshold = 1
+        elif plot_type == "residual":
+            plt.title("Standardized Residual Plot")
+            plt.ylabel("abs(res)")
+            data = abs(self.lm.residuals_internally_standardized)
+            if threshold == "auto":
+                threshold = 3
+        else:
+            raise TypeError(f"Unknown Plot Type: {plot_type}")
 
-    def cooks_plot(self):
-        """
-        Create a Plot of Cook's Distance
-
-        i.e. plot Ci vs Index
-        :return:
-        """
-        plt.scatter(range(1, self.lm.n + 1), self.lm.cooks_distance)
-        plt.title("Cook's Distance Plot")
         plt.xlabel("index")
-        plt.ylabel("Ci")
+        plt.scatter(range(self.lm.n), data)
+
+        if threshold is not None:
+            outliers = data[data > threshold]
+            indexes = np.arange(self.lm.n)[data > threshold]
+            plt.scatter(indexes, outliers, color="red")
+            return indexes
