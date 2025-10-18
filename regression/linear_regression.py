@@ -54,7 +54,7 @@ class LinearModel:
         :param df: data frame to load from
         :param response_variable: name or index of response variable (default=0)
         :param predictors: names or indexes of predictors
-        :return:
+        :return: Linear Model using the DataFrame as data
         """
         if isinstance(response_variable, int):
             y_data = df[df.columns[response_variable]]
@@ -104,7 +104,7 @@ class LinearModel:
         :param delimiter: delimiter for reading csv_file
         :param response_variable: name or index of response variable
         :param predictors: names or indexes of predictors
-        :return:
+        :return: LinearModel using the CSV as data
         """
         df = pd.read_csv(csv_file, delimiter=delimiter)
         return LinearModel.load_from_data_frame(
@@ -116,36 +116,35 @@ class LinearModel:
         return a linear model with a subset of the predictors
 
         :param predictors: which predictors to keep
-        :return:
+        :return: the submodel
         """
         return LinearModel(self.x_data[:, predictors], self.y_data)
 
     @cached_property
     def dtype(self) -> np.dtype:
         """
-        dtype of the response variable
-        :return:
+        :return: dtype of the response variable
         """
         return self.y_data.dtype
 
     @cached_property
     def x_bar(self) -> float:
         """
-        average of x_data
+        :return: average of x_data
         """
         return float(np.average(self.x_data))
 
     @cached_property
     def y_bar(self) -> float:
         """
-        average of y_data
+        :return: average of y_data
         """
         return float(np.average(self.y_data))
 
     @cached_property
     def n(self) -> int:
         """
-        number of data points
+        :return: number of data points
         """
         return self.x_data.shape[0]
 
@@ -154,6 +153,7 @@ class LinearModel:
         """
         number of predictor variables
         commonly denoted as "p"
+        :return: number of predictors
         """
         if len(self.x_data.shape) == 1:
             return 1
@@ -162,7 +162,9 @@ class LinearModel:
     @cached_property
     def parameter_count(self) -> int:
         """
-        number of model parameters
+        number of model parameters/coefficients
+        commonly demoted as "k"
+        :return: number of model parameters/coefficients
         """
         return self.predictor_count + 1
 
@@ -171,6 +173,7 @@ class LinearModel:
         """
         degrees of freedom
         df = n - p - 1
+        :return: degrees of freedom
         """
         return self.n - self.parameter_count
 
@@ -182,6 +185,7 @@ class LinearModel:
         X := [1,x]
         where 1 is a column vector of 1's
         where x is the column vector of x_data
+        :return: Design Matrix
         """
         x_data = self.x_data
         if len(x_data.shape) == 1:
@@ -193,7 +197,8 @@ class LinearModel:
         """
         C Matrix
         This is an intermediate matrix used in several calculations
-        C_matrix = inverse of X_matrix.transpose()*X_matrix
+        C_matrix = inverse of design_matrix.transpose()*design_matrix
+        :return: Inverse(Design_Matrix.transpose() * Design_Matrix
         """
         return np.linalg.inv(self.design_matrix.transpose() @ self.design_matrix)
 
@@ -204,6 +209,7 @@ class LinearModel:
         Commonly denoted P or H
         this is the matrix such that y_hat = P*y
         P_matrix := X_matrix * C_matrix * X_matrix.transpose()
+        :return: Projection Matrix
         """
         return self.design_matrix @ self.c_matrix @ self.design_matrix.transpose()
 
@@ -212,6 +218,7 @@ class LinearModel:
         """
         estimated model coefficients
         beta_hat := C_matrix * X_matrix.transpose * y_data
+        :return: beta_hat
         """
         return self.c_matrix @ self.design_matrix.transpose() @ self.y_data
 
@@ -220,6 +227,7 @@ class LinearModel:
         """
         fitted values for response variable
         y_hat := P*y
+        :return: y_hat
         """
         return self.projection_matrix @ self.y_data
 
@@ -228,6 +236,7 @@ class LinearModel:
         """
         the residuals of our response variable
         residuals := y_data - y_fitted = y_data - P*y_data
+        :return: residuals
         """
         return self.y_data - self.y_hat
 
@@ -236,7 +245,7 @@ class LinearModel:
         """
         Sum of Squares Total
         SST := sum((y - y_bar)^2)
-        :return:
+        :return: SST
         """
         return float(sum((self.y_data - self.y_bar) ** 2))
 
@@ -245,6 +254,7 @@ class LinearModel:
         """
         Sum of Squares due to Regression
         SSR := sum((y_hat - y_bar)^2) = sum((P*y - y_bar)^2)
+        :return: SSR
         """
         return float(sum((self.y_hat - self.y_bar) ** 2))
 
@@ -253,6 +263,7 @@ class LinearModel:
         """
         Sum of Squared Errors
         SSE := sum(residuals**2)
+        :return: SSE
         """
         return float(sum(self.residuals**2))
 
@@ -261,7 +272,7 @@ class LinearModel:
         """
         Mean Sum of Squares Total
         MST := SST / df where df = n - 1
-        :return:
+        :return: MST
         """
         return self.sst / (self.n - 1)
 
@@ -270,6 +281,7 @@ class LinearModel:
         """
         Mean Sum of Squares due to Regression
         MSR := MSR / df where df = p = predictor_count
+        :return: MSR
         """
         return self.ssr / self.predictor_count
 
@@ -278,14 +290,16 @@ class LinearModel:
         """
         Mean Sum of Squared Errors
         MSE := SSE / df where df = n-p-1
+        :return: MSE
         """
         return self.sse / self.df
 
     @cached_property
     def r_squared(self) -> float:
         """
-        R_squared value
+        R_squared value (coefficient of determination)
         R_squared := SSR/SST
+        :return: R_squared
         """
         return self.ssr / self.sst
 
@@ -294,6 +308,7 @@ class LinearModel:
         """
         Adjusted R_squared value
         R_squared_adjusted := 1 - (SSE / n-k)/(SST/n-1)
+        :return: R_squared_adjusted
         """
         return 1 - (self.sse / self.df) / (self.sst / (self.n - 1))
 
@@ -301,10 +316,10 @@ class LinearModel:
         """
         mallow's criterion for model selection
 
-        C_p = SSE_p/sigma_hat_sq + (2*p - n)
+        Cp = SSE_p/sigma_hat_sq + (2*p - n)
 
         :param sigma_hat_squared_full_model: the sigma_hat_sq for the full model
-        :return:
+        :return: Cp
         """
         return self.sse / sigma_hat_squared_full_model + (
             2 * self.parameter_count - self.n
@@ -315,8 +330,8 @@ class LinearModel:
         """
         Akaike Information Criterion (AIC)
 
-        AIC_p = n * ln(SSE_p/n) + 2*p
-        :return:
+        AIC = n * ln(SSE_p/n) + 2*p
+        :return: AIC
         """
         return self.n * math.log(self.sse / self.n) + 2 * self.parameter_count
 
@@ -325,8 +340,8 @@ class LinearModel:
         """
         Baye's Information Criterion (BIC)
 
-        BIC_p = n * ln(SSE_p/n) * p*ln(n)
-        :return:
+        BIC = n * ln(SSE_p/n) * p*ln(n)
+        :return: BIC
         """
         return self.n * math.log(self.sse / self.n) + self.parameter_count * math.log(
             self.n
@@ -337,6 +352,7 @@ class LinearModel:
         """
         correlation between x and y
         r = sqrt(R^squared) with the same sign as B1
+        :return: r
         """
         if self.predictor_count == 1:
             return float(math.sqrt(self.r_squared) * np.sign(self.beta_hat[1]))
@@ -350,6 +366,7 @@ class LinearModel:
         """
         estimate for model noise
         sigma_hat_squared := mse
+        :return: sigma_hat_squared
         """
         return self.mse
 
@@ -358,6 +375,7 @@ class LinearModel:
         """
         the variance-covariance matrix for beta_hat
         beta_hat_covariance_matrix = sigma_sq_hat * C
+        :return: Cov(beta_hat)
         """
         return self.sigma_hat_squared * self.c_matrix
 
@@ -366,6 +384,7 @@ class LinearModel:
         """
         the standard error for beta_hat
         beta_hat_standard_error[i]= sqrt(beta_hat_covariance_matrix[i][i])
+        :return: SE(beta_hat)
         """
         return np.vectorize(math.sqrt)(self.beta_hat_covariance_matrix.diagonal())
 
@@ -373,6 +392,7 @@ class LinearModel:
     def beta_hat_t_score(self) -> np.typing.NDArray:
         """
         t-score for the estimated model coefficients
+        :return: t_score for beta_hat
         """
         return self.beta_hat / self.beta_hat_standard_error
 
@@ -381,6 +401,7 @@ class LinearModel:
         """
         returns an array of SEE_i values
         each SSE_i is the SEE dropping the ith data point from the calculation:
+        :return: SSE_i
         """
         return np.array(
             [sum(np.delete(self.residuals, index) ** 2) for index in range(self.n)],
@@ -391,6 +412,7 @@ class LinearModel:
     def sigma_hat_squared_i(self) -> np.typing.NDArray:
         """
         returns an array of sigma_squared_hat values calculated without the ith data point
+        :return: sigma_hat_squared_i
         """
         return self.sse_i / self.df
 
@@ -399,6 +421,7 @@ class LinearModel:
         """
         returns an array of pii values
         pii = ith entry along the diagonal of the Projection matrix
+        :return: pii
         """
 
         return self.projection_matrix.diagonal()
@@ -410,6 +433,7 @@ class LinearModel:
         ri = ei / (sigma_hat * sqrt(1- pii))
         where ei is the ith residual
         and sigma_hat is the square_root of sigma_hat_squared
+        :return: ri
         """
         return np.array(
             [
@@ -427,6 +451,7 @@ class LinearModel:
         ri_star = ei / (sigma_hat_i * sqrt(1-pii))
         where ei is the ith residuals
         and sigma_hat_i is the square_root of sigma_hat_squared_i
+        :return: ri_star
         """
         return np.array(
             [
@@ -442,6 +467,7 @@ class LinearModel:
         """
         Array of Cook's Distance for each data point
         Ci = ri_squared / (n - df) * pii / (1-pii)
+        :return: array of Ci
         """
         return (
             self.residuals_internally_standardized**2
@@ -455,7 +481,7 @@ class LinearModel:
         """
         Array of the Welsh and Kuh Measure for each data point
         DFITSi = (externally studentized residuals) * sqrt(pii/(1-pii))
-        :return:
+        :return: array of DFITSi
         """
         return self.residuals_externally_standardized * np.sqrt(
             self.pii / (1 - self.pii)
@@ -467,7 +493,7 @@ class LinearModel:
         Array of the Hadi's Influence Measure for each data point
         Hi = pii/(1-pii) + (p+1)/(1-pii) * di^2/(1-di^2)
         di = normalized residual = ei/sqrt(SSE)
-        :return:
+        :return: array of Hi
         """
         di = self.residuals / math.sqrt(self.sse)
         return self.pii / (1 - self.pii) + self.parameter_count / (
@@ -490,17 +516,15 @@ class LinearModel:
     def general_f_score(self) -> float:
         """
         General F Test score for this model
+        :return: F-score
         """
 
         return self.msr / self.mse
 
     @cached_property
     def general_f_test(self) -> float:
-        # TODO: do some testing ont his. I removed the 2 but maybe it should be there?
-        # In theory the *2 should be removed, I should compare the F-test to ANOVA in R
-        # Maybe that will give me some insight
         """
-        p_value from the General F Test
+        :return: p_value from the General F Test
         """
         return float((1 - f.cdf(self.general_f_score, self.predictor_count, self.df)))
 
@@ -529,7 +553,7 @@ class LinearModel:
         :param x0: input x-value
         x0 should be an NDArray of predictors the size of predictor_count
         if you only have one predictor x0 can be a float
-        :return: standard error
+        :return: standard error for predicted value
         """
         if isinstance(x0, float):
             x0 = np.array([x0])
@@ -545,7 +569,7 @@ class LinearModel:
         returns the standard error for the average predicted value of the model at x0
 
         :param x0: input x-value
-        :return: standard error
+        :return: standard error for mean response
         """
         if isinstance(x0, float):
             x0 = np.array([x0])
@@ -579,7 +603,7 @@ class LinearModel:
         confidence interval on model parameters
 
         :param confidence: width of confidence interval (e.g. 0.95)
-        :return:
+        :return: confidence interval for beta_hat
         """
         t_crit = t.ppf((1 + confidence) / 2, self.df)
 
@@ -598,7 +622,7 @@ class LinearModel:
 
         :param x0: input x-value
         :param confidence: width of confidence interval (e.g. 0.95)
-        :return:
+        :return: prediction inteveral around x0
         """
         t_crit = t.ppf((1 + confidence) / 2, self.df)
 
@@ -617,7 +641,7 @@ class LinearModel:
 
         :param x0: input x-value
         :param confidence: width of confidence interval (e.g. 0.95)
-        :return:
+        :return: confidence interval around x0
         """
         t_crit = t.ppf((1 + confidence) / 2, self.df)
 
