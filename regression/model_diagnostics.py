@@ -478,7 +478,7 @@ class LinearModelPlots:
             plt.ylabel("DFITSi")
             data = abs(self.lm.welsh_and_kuh_measure)
             if threshold == "auto":
-                threshold = 2 * (self.lm.parameter_count/self.lm.df)**.5
+                threshold = 2 * (self.lm.parameter_count / self.lm.df) ** 0.5
         elif plot_type == "hadis":
             plt.title("Hadi's Influence Measure")
             plt.ylabel("Hi")

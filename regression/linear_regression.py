@@ -457,7 +457,9 @@ class LinearModel:
         DFITSi = (externally studentized residuals) * sqrt(pii/(1-pii))
         :return:
         """
-        return self.residuals_externally_standardized * np.sqrt(self.pii / (1 - self.pii))
+        return self.residuals_externally_standardized * np.sqrt(
+            self.pii / (1 - self.pii)
+        )
 
     @cached_property
     def hadis_influence_measure(self) -> np.typing.NDArray:
@@ -468,7 +470,9 @@ class LinearModel:
         :return:
         """
         di = self.residuals / math.sqrt(self.sse)
-        return self.pii / (1 - self.pii) + self.parameter_count / (1 - self.pii) * di**2/(1-di**2)
+        return self.pii / (1 - self.pii) + self.parameter_count / (
+            1 - self.pii
+        ) * di**2 / (1 - di**2)
 
     @cached_property
     def theoretical_quantiles(self) -> np.typing.NDArray:
