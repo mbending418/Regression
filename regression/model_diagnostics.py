@@ -39,7 +39,7 @@ class LinearModelSummary:
         get the model equation
 
         :param digits: how many digits to round to
-        :return:
+        :return: model equation
         """
         betas = [round(float(beta), digits) for beta in self.lm.beta_hat]
         equation = f"y_hat = {betas[0]}"
@@ -65,7 +65,7 @@ class LinearModelSummary:
         :param confidence: if given, the confidence level for the coefficient confidence interval
                            if not give, don't construct the confidence interval (default)
         :param print_summary: set to True to print the summary (default=True)
-        :return:
+        :return: pd DataFrame summarizing the coefficients
         """
         df = pd.DataFrame()
         df["Beta_Hat"] = self.lm.beta_hat
@@ -83,7 +83,7 @@ class LinearModelSummary:
 
     def anova_summary(self, print_summary: bool = True) -> pd.DataFrame:
         """
-        get the anova table
+        get the anova table for this model
 
         includes the following:
         SSR  SSR_df MSR  F-Test p(F>1)
@@ -91,7 +91,7 @@ class LinearModelSummary:
         SST  SST_df MST
 
         :param print_summary: set to True to print the summary (default=True)
-        :return:
+        :return: pd DataFrame of ANOVA table
         """
 
         df = pd.DataFrame()
@@ -112,7 +112,7 @@ class LinearModelSummary:
         print_summary: bool = True,
     ) -> pd.DataFrame:
         """
-        get the correlation summary
+        get the comparison criterion summary
 
         includes the following:
         correlation coefficient (if single predictor)
@@ -125,7 +125,7 @@ class LinearModelSummary:
 
         :param sigma_hat_squared_full_model: the sigma_hat_sq for the full model (optional)
         :param print_summary: set to True to print the summary (default=True)
-        :return:
+        :return: pd DataFrame summarizing criterion for comparing models
         """
         df = pd.DataFrame()
         if self.lm.predictor_count == 1:
@@ -158,7 +158,7 @@ class LinearModelSummary:
             set to "confidence" for a Confidence Interval (confidence interval of the mean response)
             set to "prediction" for a Prediction Interval (confidence interval of the prediction)
         :param print_summary: set to True to print the summary (default=True)
-        :return:
+        :return: pd DataFrame showing the confidence/prediction interval
         """
         df = pd.DataFrame()
         df["fit"] = [self.lm.predict(x0)]
