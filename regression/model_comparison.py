@@ -24,23 +24,21 @@ class NestedModelFTest:
         """
         SSE_f - SSE_r
         (SSE for full model - SSE for reduced model)
-        :return:
+        :return: SSE_full - SSE_reduced
         """
         return self.reduced_model.sse - self.full_model.sse
 
     @cached_property
     def df_diff(self) -> float:
         """
-        full_model_df - reduced_model_df
-        :return:
+        :return: full_model_df - reduced_model_df
         """
         return self.reduced_model.df - self.full_model.df
 
     @cached_property
     def mse_diff(self) -> float:
         """
-        sse_diff / df_diff
-        :return:
+        :return: sse_diff/df_diff
         """
         return self.sse_diff / self.df_diff
 
@@ -54,7 +52,7 @@ class NestedModelFTest:
     @cached_property
     def p_value(self) -> float:
         """
-        P-value
+        F-Test P-value
         """
         return float(
             (
@@ -72,7 +70,7 @@ class NestedModelFTest:
         get the Summary of the F Test
 
         :param print_summary: set to true to print the summary (default=True)
-        :return:
+        :return: F Test Summary
         """
 
         df = pd.DataFrame()
@@ -98,15 +96,30 @@ class NestedModelFTest:
 
 @dataclass(init=True, frozen=True)
 class LinearSubModels:
+    """
+    A class for doing analysis on SubModels of a Main Linear Model
+    """
+
     full_model: LinearModel
 
     def sub_model_generator(self) -> Iterator[tuple[tuple[int, ...], LinearModel]]:
+        """
+        Generator that yields every submodel in order
+
+        Each time the generator is called it yields:
+            a tuple of which predictors are in the submodel
+            the submodel
+        :return: (predictors, submodel)
+        """
         p = self.full_model.predictor_count
         for predictor_groups in [combinations(range(p), r) for r in range(p + 1)]:
             for predictors in predictor_groups:
                 yield predictors, self.full_model.get_sub_model(predictors)
 
     def all_sub_model_summary(self) -> pd.DataFrame:
+        """
+        :return: a pd dataframe summarizing all submodels
+        """
         df = pd.DataFrame()
         for predictors, model in self.sub_model_generator():
             summary = LinearModelSummary(model).comparison_criterion_summary(
@@ -125,6 +138,20 @@ class LinearSubModels:
             "R_sq", "SSE", "R_sq_adj", "Cp", "AIC", "BIC", "mallows_bias"
         ],
     ) -> float:
+        """
+        get the score based on 'criterion' for a particular submodel
+
+        :param predictors: which predictors to keep for the submodel
+        :param criterion: which criterion to use
+            R_sq : Coefficient of Determination
+            SSE: Sum Squared Errors
+            R_sq_adj: Adjusted R_sq for multilinear regression
+            Cp: Mallow's Criterion
+            AIC: Akaike Information Criterion
+            BIC: Baye's Information Criterion
+            mallows_bias: abs difference between Cp and p+1 (p = # predictors)
+        :return: sub_model score
+        """
         sub_model = self.full_model.get_sub_model(predictors)
         if criterion == "R_sq":
             return sub_model.r_squared
@@ -154,6 +181,20 @@ class LinearSubModels:
             "R_sq", "SSE", "R_sq_adj", "Cp", "AIC", "BIC", "mallows_bias"
         ],
     ) -> tuple[int, ...]:
+        """
+        find the best sub_model based on 'criterion'
+
+        :param predictors_list: list of tuples where each tuple specifies which predictors to keep
+        :param criterion: which criterion to use
+            R_sq : Coefficient of Determination (maximize)
+            SSE: Sum Squared Errors (minimize)
+            R_sq_adj: Adjusted R_sq for multilinear regression (maximize)
+            Cp: Mallow's Criterion (minimize)
+            AIC: Akaike Information Criterion (minimize)
+            BIC: Baye's Information Criterion (minimize)
+            mallows_bias: abs difference between Cp and p+1 (minimize)
+        :return: which predictors produce the best sub_model
+        """
         if criterion in ["R_sq", "R_sq_adj"]:
             maximize = True
         elif criterion in ["SSE", "Cp", "AIC", "BIC", "mallows_bias"]:
@@ -179,6 +220,19 @@ class LinearSubModels:
     def get_new_parameters_candidate_list(
         self, predictors: tuple[int, ...], forward: bool = True
     ) -> list[tuple[int, ...]]:
+        """
+        return a list of which predictors to check next
+        if forward=True:
+            return a list of tuples of predictors where
+            each tuple adds one unused predictor
+        if forward=False:
+            return a list of tuples of predictors where
+            each tuple removes one predictor from predictors
+
+        :param predictors: current set of predictors
+        :param forward: if you're doing a forward or backward step
+        :return: list of tuple of predictors
+        """
         if forward:
             return [
                 predictors + (param,)
@@ -194,6 +248,12 @@ class LinearSubModels:
             return candidate_list
 
     def get_sub_model_summary(self, predictors: tuple[int, ...]) -> pd.DataFrame:
+        """
+        return a pd DataFrame Summary of a sub_model
+
+        :param predictors: which predictors to use
+        :return: the pd DataFrame summary
+        """
         sub_model = self.full_model.get_sub_model(predictors)
         summary = LinearModelSummary(sub_model).comparison_criterion_summary(
             self.full_model.sigma_hat_squared, print_summary=False
@@ -204,10 +264,33 @@ class LinearSubModels:
 
     def variable_selection_step(
         self,
-        criterion: Literal["R_sq", "SSE", "R_sq_adj", "Cp", "AIC", "BIC"],
+        criterion: Literal[
+            "R_sq", "SSE", "R_sq_adj", "Cp", "AIC", "BIC", "mallows_bias"
+        ],
         predictors: tuple[int, ...],
         forward: bool = True,
     ) -> tuple[int, ...]:
+        """
+        perform a single forward or backward step in variable selection
+
+        1.) based on the current predictors find the list of predictor tuples to check
+        (forward = add one predictor, backward = remove one predictor)
+        2.0 based on this list, find which one is best and return that
+
+        :param criterion: the criterion to use to determine which is "best"
+            R_sq : Coefficient of Determination (maximize)
+            SSE: Sum Squared Errors (minimize)
+            R_sq_adj: Adjusted R_sq for multilinear regression (maximize)
+            Cp: Mallow's Criterion (minimize)
+            AIC: Akaike Information Criterion (minimize)
+            BIC: Baye's Information Criterion (minimize)
+            mallows_bias: abs difference between Cp and p+1 (minimize)
+        :param predictors: current tuple of predictors
+        :param forward:
+            set to True to step forward  (forward selection)
+            set to False to step backward (backward elimination)
+        :return:
+        """
         candidate_list = self.get_new_parameters_candidate_list(
             predictors=predictors, forward=forward
         )
@@ -219,6 +302,26 @@ class LinearSubModels:
         criterion: Literal["R_sq", "SSE", "R_sq_adj", "Cp", "AIC", "BIC"],
         step_wise: bool = False,
     ):
+        """
+        Perform either Forward Selection or Backward Elimination Variable selection
+        based on 'criterion'
+        Optionally using a step_wise method
+
+        :param selection_method: "forward" or "backward"
+            "forward" for Forward Selection
+                start at null model
+                add predictors at each step
+            "backward" for Backward Elimination
+            start at full model
+            remove predictors at each step
+        :param criterion: which criterion determines what model is best
+        :param step_wise: Set to True to do a stepwise selection
+            if "forward":
+                perform a backward elimination step after every forward step
+            if "backward":
+                perform a forward selection step after every backward step
+        :return: pd DataFrame Summary of the variable selection steps
+        """
         df = pd.DataFrame()
 
         if selection_method == "forward":
@@ -262,6 +365,12 @@ class LinearSubModels:
         return df
 
     def unbiased_mallows_selection(self) -> pd.DataFrame:
+        """
+        Find the best sub_model for each predictor count based on
+        an unbiased Mallow's Criterion
+        where a model is considered unbiased if Cp is close to p+1
+        :return: pd DataFrame Summary of the best sub_models for each predictor count
+        """
         df = pd.DataFrame()
         p = self.full_model.predictor_count
         for predictor_list in [list(combinations(range(p), r)) for r in range(p + 1)]:
