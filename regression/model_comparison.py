@@ -385,7 +385,10 @@ class LinearSubModels:
 
 @dataclass(init=True, frozen=True)
 class CrossValidation:
-    """ """
+    """
+    A class for running cross validation on
+    model subsets of a base LinearModel
+    """
 
     x_data: np.typing.NDArray
     y_data: np.typing.NDArray
