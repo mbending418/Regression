@@ -409,6 +409,8 @@ class CrossValidation:
 
     def get_full_model(self, data_in_fold: list[int] | None = None) -> LinearModel:
         """
+        return the full model
+            if data_in_fold is set, only train the model on the data in the fold
 
         :param data_in_fold: what data to use for the model
             None (default): use all the data
@@ -429,6 +431,8 @@ class CrossValidation:
         data_in_fold: list[int] | None = None,
     ) -> Iterator[LinearModel]:
         """
+        return submodels based on the predictor_list
+            if data_in_fold is set, only train the model on the data in the fold
 
         :param predictor_list: each entry of the list is a tuple of predictors to keep for a sub model
         :param data_in_fold: what data to use for the model
@@ -443,14 +447,15 @@ class CrossValidation:
     def get_model_test_score(
         self,
         predictors: tuple[int, ...],
-        training_indicies: list,
-        testing_indicies: list,
+        training_indicies: list[int],
+        testing_indicies: list[int],
     ) -> float:
         """
+        return the mspe for this submodel
 
         :param predictors: each entry of the list is a tuple of predictors to keep for a sub model
-        :param training_indicies:
-        :param testing_indicies:
+        :param training_indicies: a list of indicies for the training set
+        :param testing_indicies: a lit of indicies for the test set
         :return: mean_square_prediction_error
         """
         full_model = self.get_full_model(data_in_fold=training_indicies)
@@ -475,8 +480,9 @@ class CrossValidation:
         predictor_list: list[tuple[int, ...]],
         n: int,
         random_seed: int | None = None,
-    ) -> list[float]:
+    ) -> pd.DataFrame:
         """
+        run an n-fold cross validation on model subsets
 
         :param predictor_list: each entry of the list is a tuple of parameters to keep for a sub model to test
         :param n: how many folds to divide the data into
@@ -499,15 +505,23 @@ class CrossValidation:
                 ]
             )
 
-        return list(mspe / n)
+        df = pd.DataFrame()
+        df[f"predictors"] = predictor_list
+        df[f"MSPE average"] = mspe / n
+        return df
 
     def iterative_cross_validation(
         self,
         predictor_list: list[tuple[int, ...]],
         test_size: float,
         number_of_trials: int,
-    ) -> tuple[list[float], list[float]]:
+    ) -> pd.DataFrame:
         """
+        run an iterative cross validation
+            i.e. split the data into train/test
+                 train the model on train
+                 test the model on test
+                 repeat this for each trial and record the average result
 
         :param predictor_list: each entry of the list is a tuple of parameters to keep for a sub model to test
         :param test_size: how big the test set should be proportionally (between 0 and 1)
@@ -537,4 +551,9 @@ class CrossValidation:
         mspe_se = (
             mspe_sq_total - number_of_trials * (mspe_avg**2)
         ) ** 0.5 / number_of_trials
-        return list(mspe_avg), list(mspe_se)
+        df = pd.DataFrame()
+        df = pd.DataFrame()
+        df[f"predictors"] = predictor_list
+        df[f"MSPE average"] = mspe_avg
+        df[f"MSPE std err"] = mspe_se
+        return df
