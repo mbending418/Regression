@@ -132,6 +132,37 @@ class LinearSubModels:
             df = pd.concat([df, summary], ignore_index=True)
         return df
 
+    def best_sub_model_summary(
+        self, *criterion: Literal["R_sq_adj", "Cp", "AIC", "BIC"]
+    ) -> pd.DataFrame:
+        """
+        find the best sub model for each specified criterion
+        :return: summary dataframe of best criterion
+        """
+        df = pd.DataFrame()
+        for crit in criterion:
+            df[crit] = [None, None]
+        for predictors, _ in self.sub_model_generator():
+            for crit in criterion:
+                if crit in ["R_sq_adj"]:
+                    maximize = True
+                elif crit in ["Cp", "AIC", "BIC"]:
+                    maximize = False
+                else:
+                    raise TypeError(f"Unknown model criterion: {crit}")
+
+                best_score = df[crit][1]
+                current_score = self.get_sub_model_score(
+                    predictors=predictors, criterion=crit
+                )
+                if (
+                    best_score is None
+                    or (maximize and current_score > best_score)
+                    or (not maximize and current_score < best_score)
+                ):
+                    df[crit] = [predictors, current_score]
+        return df
+
     def get_sub_model_score(
         self,
         predictors: tuple[int, ...],
