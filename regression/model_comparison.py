@@ -5,6 +5,7 @@ from typing import Iterator, Literal
 from scipy.stats import f
 from dataclasses import dataclass
 from functools import cached_property
+from sklearn.model_selection import KFold, ShuffleSplit
 from regression.linear_regression import LinearModel
 from regression.model_diagnostics import LinearModelSummary
 
@@ -380,3 +381,160 @@ class LinearSubModels:
             summary = self.get_sub_model_summary(predictors)
             df = pd.concat([df, summary], ignore_index=True)
         return df
+
+
+@dataclass(init=True, frozen=True)
+class CrossValidation:
+    """ """
+
+    x_data: np.typing.NDArray
+    y_data: np.typing.NDArray
+
+    def __post_init__(self):
+        if self.x_data.shape[0] != self.y_data.shape[0]:
+            raise Exception(
+                f"x_data and y_data need to have the same number of data points:"
+                f" X.shape={self.x_data.shape} | Y.shape={self.y_data.shape}"
+            )
+
+        if len(self.x_data.shape) > 2:
+            raise Exception(
+                f"x_data needs to be one or two dimensional: x_data.shape={self.x_data.shape}"
+            )
+
+        if len(self.y_data.shape) != 1:
+            raise Exception(
+                f"y_data needs to be one dimensional: y_data.shape={self.y_data.shape}"
+            )
+
+    def get_full_model(self, data_in_fold: list[int] | None = None) -> LinearModel:
+        """
+
+        :param data_in_fold: what data to use for the model
+            None (default): use all the data
+            tuple[int, ...]: which data points to use for the model
+        :return: the full model
+        """
+        if len(self.x_data.shape) == 1:
+            x_data_fold = self.x_data[data_in_fold]
+        else:
+            x_data_fold = self.x_data[data_in_fold, :]
+        y_data_fold = self.y_data[data_in_fold]
+
+        return LinearModel(x_data_fold, y_data_fold)
+
+    def get_models(
+        self,
+        predictor_list: list[tuple[int, ...]],
+        data_in_fold: list[int] | None = None,
+    ) -> Iterator[LinearModel]:
+        """
+
+        :param predictor_list: each entry of the list is a tuple of predictors to keep for a sub model
+        :param data_in_fold: what data to use for the model
+            None (default): use all the data
+            tuple[int, ...]: which data points to use for the model
+        :return: a generator holding the models
+        """
+
+        full_model = self.get_full_model(data_in_fold=data_in_fold)
+        return (full_model.get_sub_model(parameters) for parameters in predictor_list)
+
+    def get_model_test_score(
+        self,
+        predictors: tuple[int, ...],
+        training_indicies: list,
+        testing_indicies: list,
+    ) -> float:
+        """
+
+        :param predictors: each entry of the list is a tuple of predictors to keep for a sub model
+        :param training_indicies:
+        :param testing_indicies:
+        :return: mean_square_prediction_error
+        """
+        full_model = self.get_full_model(data_in_fold=training_indicies)
+        sub_model = full_model.get_sub_model(predictors=predictors)
+
+        y = self.y_data[testing_indicies]
+        if len(self.x_data.shape) == 1:
+            y_hat = np.array(
+                [sub_model.predict(self.x_data[index]) for index in testing_indicies]
+            )
+        else:
+            y_hat = np.array(
+                [
+                    sub_model.predict(self.x_data[index, list(predictors)])
+                    for index in testing_indicies
+                ]
+            )
+        return float(sum((y - y_hat) ** 2) / len(testing_indicies))
+
+    def n_fold_cross_validation(
+        self,
+        predictor_list: list[tuple[int, ...]],
+        n: int,
+        random_seed: int | None = None,
+    ) -> list[float]:
+        """
+
+        :param predictor_list: each entry of the list is a tuple of parameters to keep for a sub model to test
+        :param n: how many folds to divide the data into
+        :param random_seed: the random seed to use
+        :return: average MSPE (mean square prediction error) of each models
+        """
+        mspe = np.array([0.0 for predictors in predictor_list], np.float64)
+
+        for train, test in KFold(
+            n_splits=n, shuffle=True, random_state=random_seed
+        ).split(np.arange(len(self.y_data))):
+            mspe += np.array(
+                [
+                    self.get_model_test_score(
+                        predictors=predictors,
+                        training_indicies=list(train),
+                        testing_indicies=list(test),
+                    )
+                    for predictors in predictor_list
+                ]
+            )
+
+        return list(mspe / n)
+
+    def iterative_cross_validation(
+        self,
+        predictor_list: list[tuple[int, ...]],
+        test_size: float,
+        number_of_trials: int,
+    ) -> tuple[list[float], list[float]]:
+        """
+
+        :param predictor_list: each entry of the list is a tuple of parameters to keep for a sub model to test
+        :param test_size: how big the test set should be proportionally (between 0 and 1)
+        :param number_of_trials: how many times to iterate on cross validation
+        :return: average MSPE (mean square prediction error) of each models, SE MSPE of each of the models
+        """
+        mspe_total = np.array([0.0 for predictors in predictor_list], np.float64)
+        mspe_sq_total = np.array([0.0 for predictors in predictor_list], np.float64)
+
+        for train, test in ShuffleSplit(
+            n_splits=number_of_trials, test_size=test_size
+        ).split(np.arange(len(self.y_data))):
+            mspe = np.array(
+                [
+                    self.get_model_test_score(
+                        predictors=predictors,
+                        training_indicies=list(train),
+                        testing_indicies=list(test),
+                    )
+                    for predictors in predictor_list
+                ]
+            )
+            mspe_total += mspe
+            mspe_sq_total += mspe**2
+
+        mspe_avg = mspe_total / number_of_trials
+        mspe_se = (
+            mspe_sq_total - number_of_trials * (mspe_avg**2)
+        ) ** 0.5 / number_of_trials
+        return list(mspe_avg), list(mspe_se)
