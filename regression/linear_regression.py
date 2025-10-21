@@ -348,18 +348,25 @@ class LinearModel:
         )
 
     @cached_property
-    def correlation(self) -> float:
+    def correlation(self) -> np.typing.NDArray | float:
         """
-        correlation between x and y
-        r = sqrt(R^squared) with the same sign as B1
-        :return: r
+        if simple linear regression:
+            correlation between x and y
+            r = sqrt(R^squared) with the same sign as B1
+            (we calculate r as the corr(y, x) or the off-diagonal entry of the corr matrix)
+        if multilinear regression
+            correlation matrix showing correleation between:
+                y and each predictor
+                each predictor with each other predictor
+
+        :return: cor(y, x) or correlation matrix
         """
+        data = np.concat([np.expand_dims(self.y_data, axis=1), self.x_data], axis=1)
+        corr = np.corrcoef(data.transpose())
         if self.predictor_count == 1:
-            return float(math.sqrt(self.r_squared) * np.sign(self.beta_hat[1]))
+            return float(corr[0][1])
         else:
-            raise TypeError(
-                f"Only single predictor models can have correlation: p={self.predictor_count}"
-            )
+            return corr
 
     @cached_property
     def sigma_hat_squared(self) -> float:
