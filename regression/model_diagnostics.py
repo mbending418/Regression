@@ -64,7 +64,6 @@ class LinearModelSummary:
         upper_bound (if confidence is set)
         t_score
         p_value
-        lower_
 
         :param confidence: if given, the confidence level for the coefficient confidence interval
                            if not give, don't construct the confidence interval (default)
