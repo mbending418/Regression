@@ -24,6 +24,7 @@ class LinearModelSummary:
         coefficient summary
         variance summary
         gof summary
+        correlation summary (if multiple predictors)
         :return:
         """
         print(self.model_equation())
@@ -33,6 +34,9 @@ class LinearModelSummary:
         self.anova_summary()
         print("")
         self.comparison_criterion_summary()
+        if self.lm.predictor_count > 1:
+            print("")
+            self.correlation_summary()
 
     def model_equation(self, digits: int = 4) -> str:
         """
@@ -130,6 +134,7 @@ class LinearModelSummary:
         df = pd.DataFrame()
         if self.lm.predictor_count == 1:
             df["r"] = [self.lm.correlation]
+            df["Cov"] = [self.lm.covariance]
         df["R_Sq"] = [self.lm.r_squared]
         df["SSE"] = [self.lm.sse]
         df["R_Sq_Adj"] = [self.lm.r_squared_adjusted]
@@ -137,6 +142,49 @@ class LinearModelSummary:
             df["Cp"] = [self.lm.mallows_criterion(sigma_hat_squared_full_model)]
         df["AIC"] = [self.lm.akaike_information_criterion]
         df["BIC"] = [self.lm.bayes_information_criterion]
+
+        if print_summary:
+            print(df)
+        return df
+
+    def covariance_summary(self, print_summary: bool = True) -> pd.DataFrame:
+        """
+        table version of the covariance matrix
+
+        :param print_summary: set to True to print the table (default: True)
+        :return:
+        """
+        names = ["Y"] + [f"X_{i + 1}" for i in range(self.lm.predictor_count)]
+        df_names = pd.DataFrame()
+        df_names["names"] = names
+
+        df_data = pd.DataFrame(self.lm.covariance)
+
+        df = pd.concat([df_names, df_data], axis=1)
+        df.columns = ["names"] + names
+
+        if print_summary:
+            print(df)
+        return df
+
+    def correlation_summary(self, print_summary: bool = True) -> pd.DataFrame:
+        """
+        table version of the correlation matrix
+
+        :param print_summary: set to True to print the table (default: True)
+        :return:
+        """
+        names = ["Y"] + [f"X_{i + 1}" for i in range(self.lm.predictor_count)]
+        df_names = pd.DataFrame()
+        df_names["names"] = names
+
+        corr = self.lm.correlation
+        if isinstance(corr, float):
+            corr = np.array([[1.0, corr], [corr, 1.0]])
+        df_data = pd.DataFrame(corr)
+
+        df = pd.concat([df_names, df_data], axis=1)
+        df.columns = ["names"] + names
 
         if print_summary:
             print(df)

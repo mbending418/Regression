@@ -348,6 +348,18 @@ class LinearModel:
         )
 
     @cached_property
+    def covariance(self) -> np.typing.NDArray:
+        """
+        covariance matrix showing covariance between:
+            y and each predictor
+            each predictor with each other predictor
+
+        :return: covariance matrix
+        """
+        data = np.concat([np.expand_dims(self.y_data, axis=1), self.x_data], axis=1)
+        return np.cov(data.transpose())
+
+    @cached_property
     def correlation(self) -> np.typing.NDArray | float:
         """
         if simple linear regression:
