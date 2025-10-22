@@ -189,6 +189,26 @@ class LinearModelSummary:
             print(df)
         return df
 
+    def multicollinearity_summary(self, print_summary: bool = True) -> pd.DataFrame:
+        """
+        table of
+            eigenvalues
+            condition indicies
+            eigenvectors
+
+        :param print_summary:
+        :return:
+        """
+        df = pd.DataFrame()
+        df["names"] = ["eigenval", "cond. index"] + [f"X_{index}" for index in range(self.lm.predictor_count)]
+        df["VIF"] = [None, None] + [self.lm.variance_inflation_factor[index] for index in range(self.lm.predictor_count)]
+        for index in range(self.lm.predictor_count):
+            df[f"V_{index}"] = [self.lm.correlation_eigenvalues[index], self.lm.condition_indicies[index]] + list(self.lm.correlation_eigenvectors[:, index])
+
+        if print_summary:
+            print(df)
+        return df
+
     def prediction_confidence_interval(
         self,
         x0: float | np.typing.NDArray,
