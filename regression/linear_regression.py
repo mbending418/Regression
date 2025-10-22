@@ -357,7 +357,7 @@ class LinearModel:
         :return: covariance matrix
         """
         if self.predictor_count == 1:
-            return np.cov(self.y_data, self.x_data)
+            return np.cov(self.y_data, np.squeeze(self.x_data))
         else:
             data = np.concat([np.expand_dims(self.y_data, axis=1), self.x_data], axis=1)
             return np.cov(data.transpose())
@@ -377,7 +377,7 @@ class LinearModel:
         :return: cor(y, x) or correlation matrix
         """
         if self.predictor_count == 1:
-            corr = np.corrcoef(self.y_data, self.x_data)
+            corr = np.corrcoef(self.y_data, np.squeeze(self.x_data))
             return float(corr[0][1])
         else:
             data = np.concat([np.expand_dims(self.y_data, axis=1), self.x_data], axis=1)
