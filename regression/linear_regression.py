@@ -388,7 +388,7 @@ class LinearModel:
         """
         :return: eigenvalues of the correlation matrix
         """
-        return np.linalg.eig(self.correlation[1:,1:]).eigenvalues
+        return np.linalg.eig(self.correlation[1:, 1:]).eigenvalues
 
     @cached_property
     def correlation_eigenvectors(self) -> np.typing.NDArray:
@@ -401,11 +401,11 @@ class LinearModel:
     @cached_property
     def condition_indicies(self) -> np.typing.NDArray:
         """
-        condition index_i = sqrt(eigen_value_0/eigen_value_i)
-            where eigen_value 0 is the biggest eigenvalue
+        condition index_i = sqrt(eigen_value_max/eigen_value_i)
+            where eigen_value_max is the biggest eigenvalue
         :return: condition indicies
         """
-        return (self.correlation_eigenvalues[0] / self.correlation_eigenvalues)**.5
+        return (np.amax(self.correlation_eigenvalues) / self.correlation_eigenvalues)**.5
 
     @cached_property
     def variance_inflation_factor(self) -> np.typing.NDArray:
@@ -423,8 +423,6 @@ class LinearModel:
             R_sq = LinearModel(x_data, y_data).r_squared
             vif.append(1 / (1 - R_sq))
         return np.array(vif)
-
-
 
     @cached_property
     def sigma_hat_squared(self) -> float:
