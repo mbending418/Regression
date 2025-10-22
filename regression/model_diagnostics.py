@@ -133,7 +133,7 @@ class LinearModelSummary:
         df = pd.DataFrame()
         if self.lm.predictor_count == 1:
             df["r"] = [self.lm.correlation]
-            df["Cov"] = [self.lm.covariance]
+            df["Cov"] = [self.lm.covariance[0][1]]
         df["R_Sq"] = [self.lm.r_squared]
         df["SSE"] = [self.lm.sse]
         df["R_Sq_Adj"] = [self.lm.r_squared_adjusted]

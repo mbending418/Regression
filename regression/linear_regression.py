@@ -356,8 +356,11 @@ class LinearModel:
 
         :return: covariance matrix
         """
-        data = np.concat([np.expand_dims(self.y_data, axis=1), self.x_data], axis=1)
-        return np.cov(data.transpose())
+        if self.predictor_count == 1:
+            return np.cov(self.y_data, self.x_data)
+        else:
+            data = np.concat([np.expand_dims(self.y_data, axis=1), self.x_data], axis=1)
+            return np.cov(data.transpose())
 
     @cached_property
     def correlation(self) -> np.typing.NDArray | float:
@@ -373,12 +376,55 @@ class LinearModel:
 
         :return: cor(y, x) or correlation matrix
         """
-        data = np.concat([np.expand_dims(self.y_data, axis=1), self.x_data], axis=1)
-        corr = np.corrcoef(data.transpose())
         if self.predictor_count == 1:
+            corr = np.corrcoef(self.y_data, self.x_data)
             return float(corr[0][1])
         else:
-            return corr
+            data = np.concat([np.expand_dims(self.y_data, axis=1), self.x_data], axis=1)
+            return np.corrcoef(data.transpose())
+
+    @cached_property
+    def correlation_eigenvalues(self) -> np.typing.NDArray:
+        """
+        :return: eigenvalues of the correlation matrix
+        """
+        return np.linalg.eig(self.correlation[1:,1:]).eigenvalues
+
+    @cached_property
+    def correlation_eigenvectors(self) -> np.typing.NDArray:
+        """
+        :return: eigenvectors of the correlation matrix
+        """
+
+        return np.linalg.eig(self.correlation[1:, 1:]).eigenvectors
+
+    @cached_property
+    def condition_indicies(self) -> np.typing.NDArray:
+        """
+        condition index_i = sqrt(eigen_value_0/eigen_value_i)
+            where eigen_value 0 is the biggest eigenvalue
+        :return: condition indicies
+        """
+        return (self.correlation_eigenvalues[0] / self.correlation_eigenvalues)**.5
+
+    @cached_property
+    def variance_inflation_factor(self) -> np.typing.NDArray:
+        """
+        Variance Inflcation Factor (VIF)
+
+        VIF = 1 / (1-R_sq_j)
+            R_sq_j is the R_sq between the jth predictor and the rest of the predictors
+        :return: variance inflation factor
+        """
+        vif = []
+        for index in range(self.predictor_count):
+            x_data = np.delete(self.x_data, index, axis=1)
+            y_data = self.x_data[:, index]
+            R_sq = LinearModel(x_data, y_data).r_squared
+            vif.append(1 / (1 - R_sq))
+        return np.array(vif)
+
+
 
     @cached_property
     def sigma_hat_squared(self) -> float:
