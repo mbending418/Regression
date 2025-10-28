@@ -257,7 +257,10 @@ class LinearModelPlots:
         show_regression_line: bool = False,
         show_error_bars: Literal["mean", "predicted"] | None = None,
         confidence_level: float = 0.95,
+        save_plot: str | None = None,
+        resolution: int = 100
     ):
+
         """
         For a Simple Linear Model (one predictor)
         optionally plot the y vs. x scatterplot (default: True)
@@ -271,6 +274,8 @@ class LinearModelPlots:
             set to "mean" to plot the "mean response confidence interval" around the regression line
             set to "predicted" to plot the "predicted value prediction interval" around the regression line
         :param confidence_level: the confidence level for the error bars
+        :param save_plot: set to a file name to save the plot
+        :param resolution:  the dpi to save the plot out at (if save_plot is set)
         :return:
         """
         if self.lm.predictor_count > 1:
@@ -320,10 +325,17 @@ class LinearModelPlots:
         plt.ylabel("Y")
         plt.legend(legend)
 
+        if save_plot:
+            plt.savefig(save_plot, dpi=resolution)
+        else:
+            plt.show()
+
     def matrix_plot(
         self,
         outliers: dict[tuple[int, ...] | int, str] | None = None,
         point_size: float = 10.0,
+        save_plot: str | None = None,
+        resolution: int = 100
     ):
         """
         Create the Matrix Plot for a MultiLinear Model
@@ -334,6 +346,8 @@ class LinearModelPlots:
         :param outliers: which outliers to plot (if any)
             dictionary mapping tuple of points by index to plot to color to plot the outliers
         :param point_size: point size on scatterplot
+        :param save_plot: set to a file name to save the plot
+        :param resolution:  the dpi to save the plot out at (if save_plot is set)
         :return:
         """
         if self.lm.predictor_count == 1:
@@ -345,7 +359,11 @@ class LinearModelPlots:
 
         for i in range(self.lm.predictor_count):
             ax[0, i + 1].scatter(self.lm.x_data[:, i], self.lm.y_data, s=point_size)
+            ax[0, i + 1].set_yticklabels([])
+            ax[0, i + 1].xaxis.tick_top()
             ax[i + 1, 0].scatter(self.lm.y_data, self.lm.x_data[:, i], s=point_size)
+            ax[i + 1, 0].set_xticklabels([])
+
             for outlier_indexes, color in outliers.items():
                 if isinstance(outlier_indexes, int):
                     indexes = [outlier_indexes]
@@ -370,6 +388,8 @@ class LinearModelPlots:
                     ax[j + 1, i + 1].scatter(
                         self.lm.x_data[:, i], self.lm.x_data[:, j], s=point_size
                     )
+                    ax[j + 1, i + 1].set_xticklabels([])
+                    ax[j + 1, i + 1].set_yticklabels([])
                     for outlier_indexes, color in outliers.items():
                         if isinstance(outlier_indexes, int):
                             indexes = [outlier_indexes]
@@ -384,16 +404,25 @@ class LinearModelPlots:
 
         font_size = (30 // self.lm.predictor_count) + 1
         ax[0, 0].text(0.4, 0.4, "Y", fontsize=font_size)
+        ax[0, 0].set_xticklabels([])
+        ax[0, 0].set_yticklabels([])
         for i in range(self.lm.predictor_count):
             ax[i + 1, i + 1].text(0.3, 0.4, f"X_{i + 1}", fontsize=font_size)
+            ax[i + 1, i + 1].set_xticklabels([])
+            ax[i + 1, i + 1].set_yticklabels([])
 
-        plt.show()
+        if save_plot:
+            plt.savefig(save_plot, dpi=resolution)
+        else:
+            plt.show()
 
     def predictor_residual_plot(
         self,
         predictors: list[int] | None = None,
         standardize_residuals: bool = False,
         absolute_value: bool = False,
+        save_plot: str | None = None,
+        resolution: int = 100
     ):
         """
         plot the residuals vs predictors
@@ -401,6 +430,8 @@ class LinearModelPlots:
         :param predictors: which predictors (by index) to show
         :param standardize_residuals: set to True to standardize residuals
         :param absolute_value: set to True to take the absolute value of the residuals
+        :param save_plot: set to a file name to save the plot
+        :param resolution:  the dpi to save the plot out at (if save_plot is set)
         :return:
         """
         if standardize_residuals:
@@ -425,16 +456,21 @@ class LinearModelPlots:
             else:
                 ax_i = ax[plot_index // plot_size[0], plot_index % plot_size[0]]
                 ax_i.scatter(self.lm.x_data[:, predictor_index], residuals)
-            ax_i.set_title(f"Predictor {predictor_index}")
-            ax_i.set_xlabel(f"x_{predictor_index}")
+            ax_i.set_title(f"Predictor {predictor_index+1}")
+            ax_i.set_xlabel(f"x_{predictor_index+1}")
             ax_i.set_ylabel(y_label)
-        plt.show()
+        if save_plot:
+            plt.savefig(save_plot, dpi=resolution)
+        else:
+            plt.show()
 
     def residual_plot(
         self,
         standardize_residuals: bool = False,
         absolute_value: bool = False,
         x_axis: Literal["fitted", "response", "index"] = "fitted",
+        save_plot: str | None = None,
+        resolution: int = 100
     ):
         """
         create a Residual Plot
@@ -445,6 +481,8 @@ class LinearModelPlots:
             use "fitted" to plot y_hat
             use "response" to plot y
             use "index" to plot the data index
+        :param save_plot: set to a file name to save the plot
+        :param resolution:  the dpi to save the plot out at (if save_plot is set)
         :return:
         """
         if standardize_residuals:
@@ -474,6 +512,10 @@ class LinearModelPlots:
         plt.title("Residual Plot")
         plt.xlabel(x_label)
         plt.ylabel(y_label)
+        if save_plot:
+            plt.savefig(save_plot, dpi=resolution)
+        else:
+            plt.show()
 
     def scale_location_plot(self):
         """
@@ -512,6 +554,8 @@ class LinearModelPlots:
         self,
         plot_type=Literal["Pii", "cooks", "residual", "welsh_kuh", "hadis"],
         threshold: float | Literal["auto"] | None = None,
+        save_plot: str | None = None,
+        resolution: int = 100
     ):
         """
 
@@ -519,6 +563,8 @@ class LinearModelPlots:
         :param threshold: automatically detect and return outliers (index) above this threshold
                set to None to not automatically identify outliers (default option)
                set to "auto" to use the automatic threshold for this metric
+        :param save_plot: set to a file name to save the plot
+        :param resolution:  the dpi to save the plot out at (if save_plot is set)
         :return:
         """
 
@@ -563,3 +609,7 @@ class LinearModelPlots:
             indexes = np.arange(self.lm.n)[data > threshold]
             plt.scatter(indexes, outliers, color="red")
             return indexes
+        if save_plot:
+            plt.savefig(save_plot, dpi=resolution)
+        else:
+            plt.show()
