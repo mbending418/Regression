@@ -332,6 +332,7 @@ class LinearModelPlots:
 
     def matrix_plot(
         self,
+        variable_names: list[str] | None = None,
         outliers: dict[tuple[int, ...] | int, str] | None = None,
         point_size: float = 10.0,
         save_plot: str | None = None,
@@ -343,6 +344,9 @@ class LinearModelPlots:
         ie create a grid plotting:
          the response vs each predictor.
          each predictor vs each other predictor.
+        :param variable_names: the names of the variables
+            list response first
+            then list the predictors in order
         :param outliers: which outliers to plot (if any)
             dictionary mapping tuple of points by index to plot to color to plot the outliers
         :param point_size: point size on scatterplot
@@ -352,6 +356,10 @@ class LinearModelPlots:
         """
         if self.lm.predictor_count == 1:
             raise TypeError("need more than one predictor for matrix_plot")
+        if variable_names is not None and len(variable_names) != self.lm.predictor_count + 1:
+            raise TypeError(f"len(variable_names) needs to be 1 more than predictor_count:"
+                            f" len(variable_names) = {len(variable_names)} |"
+                            f" predictor_count + 1 = {self.lm.predictor_count + 1}")
         if outliers is None:
             outliers = {}
 
@@ -403,11 +411,19 @@ class LinearModelPlots:
                         )
 
         font_size = (30 // self.lm.predictor_count) + 1
-        ax[0, 0].text(0.4, 0.4, "Y", fontsize=font_size)
+        if variable_names is None:
+            response_name = "Y"
+        else:
+            response_name = variable_names[0]
+        ax[0, 0].text(0.4, 0.4, response_name, fontsize=font_size)
         ax[0, 0].set_xticklabels([])
         ax[0, 0].set_yticklabels([])
         for i in range(self.lm.predictor_count):
-            ax[i + 1, i + 1].text(0.3, 0.4, f"X_{i + 1}", fontsize=font_size)
+            if variable_names is None:
+                predictor_name = f"X_{i + 1}"
+            else:
+                predictor_name = variable_names[i+1]
+            ax[i + 1, i + 1].text(0.3, 0.4, predictor_name, fontsize=font_size)
             ax[i + 1, i + 1].set_xticklabels([])
             ax[i + 1, i + 1].set_yticklabels([])
 
@@ -469,6 +485,8 @@ class LinearModelPlots:
         standardize_residuals: bool = False,
         absolute_value: bool = False,
         x_axis: Literal["fitted", "response", "index"] = "fitted",
+        color: str = "blue",
+        outliers: dict[tuple[int, ...] | int, str] | None = None,
         save_plot: str | None = None,
         resolution: int = 100
     ):
@@ -481,6 +499,9 @@ class LinearModelPlots:
             use "fitted" to plot y_hat
             use "response" to plot y
             use "index" to plot the data index
+        :param color: main plot color
+        :param outliers: which outliers to plot (if any)
+            dictionary mapping tuple of points by index to plot to color to plot the outliers
         :param save_plot: set to a file name to save the plot
         :param resolution:  the dpi to save the plot out at (if save_plot is set)
         :return:
@@ -507,8 +528,19 @@ class LinearModelPlots:
             raise Exception(
                 f"Unknown Option for LinearModelPlots.residual_plot: x_axis={x_axis}"
             )
-
-        plt.scatter(x, residuals)
+        if outliers is None:
+            outliers = {}
+        plt.scatter(x, residuals, color=color)
+        for outlier_indexes, color in outliers.items():
+            if isinstance(outlier_indexes, int):
+                indexes = [outlier_indexes]
+            else:
+                indexes = list(outlier_indexes)
+            plt.scatter(
+                x[indexes],
+                residuals[indexes],
+                color=color
+            )
         plt.title("Residual Plot")
         plt.xlabel(x_label)
         plt.ylabel(y_label)
