@@ -388,6 +388,8 @@ class LinearModel:
         """
         :return: eigenvalues of the correlation matrix
         """
+        if isinstance(self.correlation, float):
+            raise TypeError("Cannot calculate eigenvectors for SLR")
         return np.linalg.eig(self.correlation[1:, 1:]).eigenvalues
 
     @cached_property
@@ -395,7 +397,8 @@ class LinearModel:
         """
         :return: eigenvectors of the correlation matrix
         """
-
+        if isinstance(self.correlation, float):
+            raise TypeError("Cannot calculate eigenvectors for SLR")
         return np.linalg.eig(self.correlation[1:, 1:]).eigenvectors
 
     @cached_property
