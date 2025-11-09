@@ -200,10 +200,18 @@ class LinearModelSummary:
         :return:
         """
         df = pd.DataFrame()
-        df["names"] = ["eigenval", "cond. index"] + [f"X_{index}" for index in range(self.lm.predictor_count)]
-        df["VIF"] = [None, None] + [self.lm.variance_inflation_factor[index] for index in range(self.lm.predictor_count)]
+        df["names"] = ["eigenval", "cond. index"] + [
+            f"X_{index}" for index in range(self.lm.predictor_count)
+        ]
+        df["VIF"] = [None, None] + [
+            self.lm.variance_inflation_factor[index]
+            for index in range(self.lm.predictor_count)
+        ]
         for index in range(self.lm.predictor_count):
-            df[f"V_{index}"] = [self.lm.correlation_eigenvalues[index], self.lm.condition_indicies[index]] + list(self.lm.correlation_eigenvectors[:, index])
+            df[f"V_{index}"] = [
+                self.lm.correlation_eigenvalues[index],
+                self.lm.condition_indicies[index],
+            ] + list(self.lm.correlation_eigenvectors[:, index])
 
         if print_summary:
             print(df)
@@ -258,9 +266,8 @@ class LinearModelPlots:
         show_error_bars: Literal["mean", "predicted"] | None = None,
         confidence_level: float = 0.95,
         save_plot: str | None = None,
-        resolution: int = 100
+        resolution: int = 100,
     ):
-
         """
         For a Simple Linear Model (one predictor)
         optionally plot the y vs. x scatterplot (default: True)
@@ -336,7 +343,7 @@ class LinearModelPlots:
         outliers: dict[tuple[int, ...] | int, str] | None = None,
         point_size: float = 10.0,
         save_plot: str | None = None,
-        resolution: int = 100
+        resolution: int = 100,
     ):
         """
         Create the Matrix Plot for a MultiLinear Model
@@ -356,10 +363,15 @@ class LinearModelPlots:
         """
         if self.lm.predictor_count == 1:
             raise TypeError("need more than one predictor for matrix_plot")
-        if variable_names is not None and len(variable_names) != self.lm.predictor_count + 1:
-            raise TypeError(f"len(variable_names) needs to be 1 more than predictor_count:"
-                            f" len(variable_names) = {len(variable_names)} |"
-                            f" predictor_count + 1 = {self.lm.predictor_count + 1}")
+        if (
+            variable_names is not None
+            and len(variable_names) != self.lm.predictor_count + 1
+        ):
+            raise TypeError(
+                f"len(variable_names) needs to be 1 more than predictor_count:"
+                f" len(variable_names) = {len(variable_names)} |"
+                f" predictor_count + 1 = {self.lm.predictor_count + 1}"
+            )
         if outliers is None:
             outliers = {}
 
@@ -422,7 +434,7 @@ class LinearModelPlots:
             if variable_names is None:
                 predictor_name = f"X_{i + 1}"
             else:
-                predictor_name = variable_names[i+1]
+                predictor_name = variable_names[i + 1]
             ax[i + 1, i + 1].text(0.3, 0.4, predictor_name, fontsize=font_size)
             ax[i + 1, i + 1].set_xticklabels([])
             ax[i + 1, i + 1].set_yticklabels([])
@@ -438,7 +450,7 @@ class LinearModelPlots:
         standardize_residuals: bool = False,
         absolute_value: bool = False,
         save_plot: str | None = None,
-        resolution: int = 100
+        resolution: int = 100,
     ):
         """
         plot the residuals vs predictors
@@ -488,7 +500,7 @@ class LinearModelPlots:
         color: str = "blue",
         outliers: dict[tuple[int, ...] | int, str] | None = None,
         save_plot: str | None = None,
-        resolution: int = 100
+        resolution: int = 100,
     ):
         """
         create a Residual Plot
@@ -536,11 +548,7 @@ class LinearModelPlots:
                 indexes = [outlier_indexes]
             else:
                 indexes = list(outlier_indexes)
-            plt.scatter(
-                x[indexes],
-                residuals[indexes],
-                color=color
-            )
+            plt.scatter(x[indexes], residuals[indexes], color=color)
         plt.title("Residual Plot")
         plt.xlabel(x_label)
         plt.ylabel(y_label)
@@ -587,7 +595,7 @@ class LinearModelPlots:
         plot_type=Literal["Pii", "cooks", "residual", "welsh_kuh", "hadis"],
         threshold: float | Literal["auto"] | None = None,
         save_plot: str | None = None,
-        resolution: int = 100
+        resolution: int = 100,
     ):
         """
 

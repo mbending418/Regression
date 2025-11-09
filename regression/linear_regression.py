@@ -408,7 +408,9 @@ class LinearModel:
             where eigen_value_max is the biggest eigenvalue
         :return: condition indicies
         """
-        return (np.amax(self.correlation_eigenvalues) / self.correlation_eigenvalues)**.5
+        return (
+            np.amax(self.correlation_eigenvalues) / self.correlation_eigenvalues
+        ) ** 0.5
 
     @cached_property
     def variance_inflation_factor(self) -> np.typing.NDArray:
