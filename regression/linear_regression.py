@@ -639,6 +639,22 @@ class LinearModel:
         x0 = np.concat((np.array([1]), x0))
         return float(math.sqrt(self.sigma_hat_squared * (x0 @ self.c_matrix @ x0)))
 
+    def residual_standard_error(self, x0: float | np.typing.NDArray) -> float:
+        """
+        returns the standard error for the residual of the model at x0
+
+        :param x0: input x-value
+        :return: standard error for residual
+        """
+        if isinstance(x0, float):
+            x0 = np.array([x0])
+        if x0.shape != (self.predictor_count,):
+            raise Exception(
+                f"wrong shape for x0. Expected=({self.predictor_count},) Actual={x0.shape}"
+            )
+        x0 = np.concat((np.array([1]), x0))
+        return float(math.sqrt(self.sigma_hat_squared * (1 - x0 @ self.c_matrix @ x0)))
+
     def beta_hat_p_values(
         self,
         offsets: np.typing.NDArray | None = None,
