@@ -128,11 +128,11 @@ class LinearModel:
         return self.y_data.dtype
 
     @cached_property
-    def x_bar(self) -> float:
+    def x_bar(self) -> np.typing.NDArray:
         """
         :return: average of x_data
         """
-        return float(np.average(self.x_data))
+        return np.ones(self.n) @ self.x_data / self.n
 
     @cached_property
     def y_bar(self) -> float:
