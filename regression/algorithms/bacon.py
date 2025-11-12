@@ -160,7 +160,6 @@ class BACON:
             t_distances = self.t_score_distances(current_subset=previous_subset)
             r = len(previous_subset)
             t_crit = t.isf(q=alpha / (2 * (r + 1)), df=r - self.lm.predictor_count)
-            # t_crit = t.isf(q=alpha / 2, df=r - self.lm.predictor_count)
             current_subset = np.where(abs(t_distances) < abs(t_crit))[0].tolist()
             if set(current_subset) == set(previous_subset):
                 break
