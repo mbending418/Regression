@@ -12,7 +12,7 @@ def find_smallest_n(arr: np.typing.NDArray, n: int) -> list[int]:
 
 @dataclass(init=True, frozen=True)
 class BACON:
-    """BACON Algoritm for outlier detection"""
+    """BACON Algorithm for outlier detection"""
 
     x_data: np.typing.NDArray  # 2D array
     y_data: np.typing.NDArray | None = None  # 1D array
