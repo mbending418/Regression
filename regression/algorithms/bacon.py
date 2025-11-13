@@ -118,7 +118,7 @@ class BACON:
         """
         return find_smallest_n(arr=self.mahalanobis_distances(), n=m)
 
-    def remove_multivariate_outliers(self, m: int, alpha: float, max_iter: int = 10000) -> list[int]:
+    def remove_multivariate_outliers(self, m: int, alpha_chi: float, max_iter: int = 10000) -> list[int]:
         """
         identify outliers for Multivariate Data using BACON
         and return the indexes of the data points which are NOT outliers
@@ -126,7 +126,7 @@ class BACON:
         Algorithm 3 in the BACON paper
 
         :param m: how many data points are in the initial basic subset
-        :param alpha: significance level for the chi-squared distribution
+        :param alpha_chi: significance level for the chi-squared distribution
         :param max_iter: the maximum number of iterations before quitting (default = 10000)
         :return: indexes of non outlier data
         """
@@ -136,7 +136,7 @@ class BACON:
         n = self.n
         p = self.x_data.shape[1]
 
-        chi_crit = np.sqrt(chi2.isf(q=alpha / n, df=p))
+        chi_crit = np.sqrt(chi2.isf(q=alpha_chi / n, df=p))
 
         for i in range(max_iter):
             previous_subset = current_subset
@@ -156,18 +156,18 @@ class BACON:
                 break
         return current_subset
 
-    def initial_regression_basic_subset(self, m: int, alpha: float, max_iter: int = 10000) -> list[int]:
+    def initial_regression_basic_subset(self, m: int, alpha_chi: float, max_iter: int = 10000) -> list[int]:
         """
         return the initial basic subset for the BACON algorithm for Linear Regression
 
         Algorithm 4 in the BACON paper
 
         :param m: number of data points are in the initial basic subset
-        :param alpha: significance level for the chi-squared distribution
+        :param alpha_chi: significance level for the chi-squared distribution
         :param max_iter: the maximum number of iterations before quitting (default = 10000)
         :return: indexes of non outlier data
         """
-        current_subset = self.remove_multivariate_outliers(m=m, alpha=alpha, max_iter=max_iter)
+        current_subset = self.remove_multivariate_outliers(m=m, alpha_chi=alpha_chi, max_iter=max_iter)
         t_values = self.t_score_distances(current_subset=current_subset)
         current_subset = find_smallest_n(t_values, self.linear_model.parameter_count + 1)
         for r in range(len(current_subset), m):
@@ -175,7 +175,7 @@ class BACON:
             current_subset = find_smallest_n(t_values, r + 1)
         return current_subset
 
-    def remove_regression_outliers(self, m: int, alpha: float, max_iter: int = 10000) -> list[int]:
+    def remove_regression_outliers(self, m: int, alpha_chi: float, alpha_t: float or None = None, max_iter: int = 10000) -> list[int]:
         """
         identify outliers for Linear Regression Data using BACON
         and return the indexes of the data points which are NOT outliers
@@ -183,16 +183,19 @@ class BACON:
         Algorithm 5 in the BACON paper
 
         :param m: number of data points are in the initial basic subset
-        :param alpha: significance level for the t and chi-squared distributions
+        :param alpha_chi: significance level for the chi-squared distributions
+        :param alpha_t: significance level for the t distribution (uses alpha_chi if not set)
         :param max_iter: the maximum number of iterations before quitting (default = 10000)
         :return: indexes of non outlier data
         """
-        current_subset = self.initial_regression_basic_subset(m=m, alpha=alpha, max_iter=max_iter)
+        if alpha_t is None:
+            alpha_t = alpha_chi
+        current_subset = self.initial_regression_basic_subset(m=m, alpha_chi=alpha_chi, max_iter=max_iter)
         for i in range(max_iter):
             previous_subset = current_subset
             t_distances = self.t_score_distances(current_subset=previous_subset)
             r = len(previous_subset)
-            t_crit = t.isf(q=alpha / (2 * (r + 1)), df=r - self.linear_model.predictor_count)
+            t_crit = t.isf(q=alpha_t / (2 * (r + 1)), df=r - self.linear_model.predictor_count)
             current_subset = np.where(abs(t_distances) < abs(t_crit))[0].tolist()
             if set(current_subset) == set(previous_subset):
                 break
