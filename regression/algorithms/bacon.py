@@ -38,6 +38,10 @@ class BACON:
         return self.x_data.shape[0]
 
     @cached_property
+    def x_dim(self) -> int:
+        return self.x_data.shape[1]
+
+    @cached_property
     def x_bar(self) -> np.typing.NDArray:
         return np.ones(self.n) @ self.x_data / self.n
 
@@ -54,10 +58,11 @@ class BACON:
         :param indexes: which indexes to use
         :return: the linear Model fit just on the indexes given
         """
-        if self.linear_model is None:
-            raise TypeError("Cannot take linear model without setting y_data")
         x_in = self.x_data[indexes, :]
-        y_in = self.y_data[indexes]
+        if self.y_data is None:
+            raise TypeError("Cannot take linear model without setting y_data")
+        else:
+            y_in = self.y_data[indexes]
         return LinearModel(x_in, y_in)
 
     def mahalanobis_distances(self, current_basic_subset: list[int] | None = None) -> np.typing.NDArray:
@@ -95,6 +100,8 @@ class BACON:
         :param current_subset: indexes for the current set for the reduced model
         :return: t_score_distances
         """
+        if self.y_data is None:
+            raise TypeError("Cannot find t_score_distance without setting y_data")
         lm_reduced = self.model_subset(indexes=current_subset)
         res = []
         for i in range(self.n):
@@ -134,7 +141,7 @@ class BACON:
         current_subset = self.initial_basic_subset(m)
 
         n = self.n
-        p = self.x_data.shape[1]
+        p = self.x_dim
 
         chi_crit = np.sqrt(chi2.isf(q=alpha_chi / n, df=p))
 
@@ -169,13 +176,13 @@ class BACON:
         """
         current_subset = self.remove_multivariate_outliers(m=m, alpha_chi=alpha_chi, max_iter=max_iter)
         t_values = self.t_score_distances(current_subset=current_subset)
-        current_subset = find_smallest_n(t_values, self.linear_model.parameter_count + 1)
+        current_subset = find_smallest_n(t_values, self.x_dim + 2)
         for r in range(len(current_subset), m):
             t_values = self.t_score_distances(current_subset=current_subset)
             current_subset = find_smallest_n(t_values, r + 1)
         return current_subset
 
-    def remove_regression_outliers(self, m: int, alpha_chi: float, alpha_t: float or None = None, max_iter: int = 10000) -> list[int]:
+    def remove_regression_outliers(self, m: int, alpha_chi: float, alpha_t: float | None = None, max_iter: int = 10000) -> list[int]:
         """
         identify outliers for Linear Regression Data using BACON
         and return the indexes of the data points which are NOT outliers
@@ -195,7 +202,7 @@ class BACON:
             previous_subset = current_subset
             t_distances = self.t_score_distances(current_subset=previous_subset)
             r = len(previous_subset)
-            t_crit = t.isf(q=alpha_t / (2 * (r + 1)), df=r - self.linear_model.predictor_count)
+            t_crit = t.isf(q=alpha_t / (2 * (r + 1)), df=r - self.x_dim)
             current_subset = np.where(abs(t_distances) < abs(t_crit))[0].tolist()
             if set(current_subset) == set(previous_subset):
                 break
