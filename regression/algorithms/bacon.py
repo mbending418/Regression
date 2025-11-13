@@ -13,6 +13,7 @@ def find_smallest_n(arr: np.typing.NDArray, n: int) -> list[int]:
 @dataclass(init=True, frozen=True)
 class BACON:
     """BACON Algoritm for outlier detection"""
+
     x_data: np.typing.NDArray  # 2D array
     y_data: np.typing.NDArray | None = None  # 1D array
 
@@ -65,7 +66,9 @@ class BACON:
             y_in = self.y_data[indexes]
         return LinearModel(x_in, y_in)
 
-    def mahalanobis_distances(self, current_basic_subset: list[int] | None = None) -> np.typing.NDArray:
+    def mahalanobis_distances(
+        self, current_basic_subset: list[int] | None = None
+    ) -> np.typing.NDArray:
         """
         calculate Mahalanobis Distances between each data point and the mean (x_bar)
 
@@ -86,7 +89,9 @@ class BACON:
         cov_matrix_inv = np.linalg.inv(cov_matrix)
         res = []
         for i in range(self.n):
-            res.append(distance.mahalanobis(self.x_data[i, :], self.x_bar, cov_matrix_inv))
+            res.append(
+                distance.mahalanobis(self.x_data[i, :], self.x_bar, cov_matrix_inv)
+            )
         return np.array(res)
 
     def t_score_distances(self, current_subset: list[int]) -> np.typing.NDArray:
@@ -107,9 +112,13 @@ class BACON:
         for i in range(self.n):
             x0 = self.x_data[i, :]
             if i in current_subset:
-                t_value = (self.y_data[i] - lm_reduced.predict(x0)) / lm_reduced.residual_standard_error(x0)
+                t_value = (
+                    self.y_data[i] - lm_reduced.predict(x0)
+                ) / lm_reduced.residual_standard_error(x0)
             else:
-                t_value = (self.y_data[i] - lm_reduced.predict(x0)) / lm_reduced.predicted_value_standard_error(x0)
+                t_value = (
+                    self.y_data[i] - lm_reduced.predict(x0)
+                ) / lm_reduced.predicted_value_standard_error(x0)
             res.append(t_value)
         return np.array(res)
 
@@ -125,7 +134,9 @@ class BACON:
         """
         return find_smallest_n(arr=self.mahalanobis_distances(), n=m)
 
-    def remove_multivariate_outliers(self, m: int, alpha_chi: float, max_iter: int = 10000) -> list[int]:
+    def remove_multivariate_outliers(
+        self, m: int, alpha_chi: float, max_iter: int = 10000
+    ) -> list[int]:
         """
         identify outliers for Multivariate Data using BACON
         and return the indexes of the data points which are NOT outliers
@@ -150,7 +161,7 @@ class BACON:
             distances = self.mahalanobis_distances(previous_subset)
 
             r = len(current_subset)
-            h = ((n + p + 1) / 2)
+            h = (n + p + 1) / 2
 
             c_np = 1 + (p + 1) / (n - p) + 2 / (n - 1 - 3 * p)
             c_hr = max([0, (h - r) / (h + r)])
@@ -163,7 +174,9 @@ class BACON:
                 break
         return current_subset
 
-    def initial_regression_basic_subset(self, m: int, alpha_chi: float, max_iter: int = 10000) -> list[int]:
+    def initial_regression_basic_subset(
+        self, m: int, alpha_chi: float, max_iter: int = 10000
+    ) -> list[int]:
         """
         return the initial basic subset for the BACON algorithm for Linear Regression
 
@@ -174,7 +187,9 @@ class BACON:
         :param max_iter: the maximum number of iterations before quitting (default = 10000)
         :return: indexes of non outlier data
         """
-        current_subset = self.remove_multivariate_outliers(m=m, alpha_chi=alpha_chi, max_iter=max_iter)
+        current_subset = self.remove_multivariate_outliers(
+            m=m, alpha_chi=alpha_chi, max_iter=max_iter
+        )
         t_values = self.t_score_distances(current_subset=current_subset)
         current_subset = find_smallest_n(t_values, self.x_dim + 2)
         for r in range(len(current_subset), m):
@@ -182,7 +197,13 @@ class BACON:
             current_subset = find_smallest_n(t_values, r + 1)
         return current_subset
 
-    def remove_regression_outliers(self, m: int, alpha_chi: float, alpha_t: float | None = None, max_iter: int = 10000) -> list[int]:
+    def remove_regression_outliers(
+        self,
+        m: int,
+        alpha_chi: float,
+        alpha_t: float | None = None,
+        max_iter: int = 10000,
+    ) -> list[int]:
         """
         identify outliers for Linear Regression Data using BACON
         and return the indexes of the data points which are NOT outliers
@@ -197,7 +218,9 @@ class BACON:
         """
         if alpha_t is None:
             alpha_t = alpha_chi
-        current_subset = self.initial_regression_basic_subset(m=m, alpha_chi=alpha_chi, max_iter=max_iter)
+        current_subset = self.initial_regression_basic_subset(
+            m=m, alpha_chi=alpha_chi, max_iter=max_iter
+        )
         for i in range(max_iter):
             previous_subset = current_subset
             t_distances = self.t_score_distances(current_subset=previous_subset)
