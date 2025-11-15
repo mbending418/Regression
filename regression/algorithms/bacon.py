@@ -1,4 +1,5 @@
 import numpy as np
+from typing import Literal
 from scipy.stats import t, chi2
 from scipy.spatial import distance
 from dataclasses import dataclass
@@ -94,6 +95,17 @@ class BACON:
             )
         return np.array(res)
 
+    def median_distances(self) -> np.typing.NDArray:
+        """
+        Calculate the distance between each data point and the median
+
+        Used for V2 of Initial Subset Calculation
+
+        :return:
+        """
+        diff = self.x_data - np.median(self.x_data, axis=0)
+        return np.sum(diff * 2, axis=1)
+
     def t_score_distances(self, current_subset: list[int]) -> np.typing.NDArray:
         """
         calculate the t_score residual distances for each data point
@@ -122,7 +134,11 @@ class BACON:
             res.append(t_value)
         return np.array(res)
 
-    def initial_basic_subset(self, m: int) -> list[int]:
+    def initial_basic_subset(
+        self,
+        m: int | None = None,
+        selection_method: Literal["mahalanobis", "median"] = "mahalanobis",
+    ) -> list[int]:
         """
         return the initial basic subset for the BACON algorithm
         specifically return the m indexes with the lowest Mahalanobis Distance
@@ -130,12 +146,27 @@ class BACON:
         Algorithm 2 Version 1 in the BACON paper
 
         :param m: how many data points are in the initial basic subset
+        :param selection_method:
+            set to "mahalanobis" to use the mahalanobis distance to find the initial subset (V1 in the paper)
+            set to "median" to use the distance from the median to find the initial subset (V2 in the paper)
         :return: indexes for initial basic subset
         """
-        return find_smallest_n(arr=self.mahalanobis_distances(), n=m)
+        if m is None:
+            m = 4 * self.x_dim
+
+        if selection_method == "mahalanobis":
+            return find_smallest_n(arr=self.mahalanobis_distances(), n=m)
+        elif selection_method == "median":
+            return find_smallest_n(arr=self.median_distances(), n=m)
+        else:
+            raise TypeError(f"Unknown selection_method: {selection_method}")
 
     def remove_multivariate_outliers(
-        self, m: int, alpha_chi: float, max_iter: int = 10000
+        self,
+        m: int | None = None,
+        selection_method: Literal["mahalanobis", "median"] = "mahalanobis",
+        alpha_chi: float = 0.05,
+        max_iter: int = 10000,
     ) -> list[int]:
         """
         identify outliers for Multivariate Data using BACON
@@ -144,12 +175,17 @@ class BACON:
         Algorithm 3 in the BACON paper
 
         :param m: how many data points are in the initial basic subset
+            default value = 4 * p where p is dimension of each entry in x_data
+        :param selection_method:
+            set to "mahalanobis" to use the mahalanobis distance to find the initial subset (V1 in the paper)
+            set to "median" to use the distance from the median to find the initial subset (V2 in the paper)
         :param alpha_chi: significance level for the chi-squared distribution
         :param max_iter: the maximum number of iterations before quitting (default = 10000)
         :return: indexes of non outlier data
         """
-
-        current_subset = self.initial_basic_subset(m)
+        current_subset = self.initial_basic_subset(
+            m=m, selection_method=selection_method
+        )
 
         n = self.n
         p = self.x_dim
@@ -175,7 +211,11 @@ class BACON:
         return current_subset
 
     def initial_regression_basic_subset(
-        self, m: int, alpha_chi: float, max_iter: int = 10000
+        self,
+        m: int | None = None,
+        selection_method: Literal["mahalanobis", "median"] = "mahalanobis",
+        alpha_chi: float = 0.05,
+        max_iter: int = 10000,
     ) -> list[int]:
         """
         return the initial basic subset for the BACON algorithm for Linear Regression
@@ -183,12 +223,19 @@ class BACON:
         Algorithm 4 in the BACON paper
 
         :param m: number of data points are in the initial basic subset
+            default value = 4 * p where p is dimension of each entry in x_data
+        :param selection_method:
+            set to "mahalanobis" to use mahalanobis distance to find the initial multivariate subset (V1 in the paper)
+            set to "median" to use distance from the median to find the initial multivariat esubset (V2 in the paper)
         :param alpha_chi: significance level for the chi-squared distribution
         :param max_iter: the maximum number of iterations before quitting (default = 10000)
         :return: indexes of non outlier data
         """
+        if m is None:
+            m = 4 * self.x_dim
+
         current_subset = self.remove_multivariate_outliers(
-            m=m, alpha_chi=alpha_chi, max_iter=max_iter
+            m=m, selection_method=selection_method, max_iter=max_iter
         )
         t_values = self.t_score_distances(current_subset=current_subset)
         current_subset = find_smallest_n(t_values, self.x_dim + 2)
@@ -199,8 +246,9 @@ class BACON:
 
     def remove_regression_outliers(
         self,
-        m: int,
-        alpha_chi: float,
+        m: int | None = None,
+        selection_method: Literal["mahalanobis", "median"] = "mahalanobis",
+        alpha_chi: float = 0.05,
         alpha_t: float | None = None,
         max_iter: int = 10000,
     ) -> list[int]:
@@ -211,6 +259,10 @@ class BACON:
         Algorithm 5 in the BACON paper
 
         :param m: number of data points are in the initial basic subset
+            default value = 4 * p where p is dimension of each entry in x_data
+        :param selection_method:
+            set to "mahalanobis" to use mahalanobis distance to find the initial multivariate subset (V1 in the paper)
+            set to "median" to use distance from the median to find the initial multivariate subset (V2 in the paper)
         :param alpha_chi: significance level for the chi-squared distributions
         :param alpha_t: significance level for the t distribution (uses alpha_chi if not set)
         :param max_iter: the maximum number of iterations before quitting (default = 10000)
@@ -219,7 +271,10 @@ class BACON:
         if alpha_t is None:
             alpha_t = alpha_chi
         current_subset = self.initial_regression_basic_subset(
-            m=m, alpha_chi=alpha_chi, max_iter=max_iter
+            m=m,
+            selection_method=selection_method,
+            alpha_chi=alpha_chi,
+            max_iter=max_iter,
         )
         for i in range(max_iter):
             previous_subset = current_subset
